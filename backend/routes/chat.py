@@ -21,14 +21,15 @@ class ChatMessage(BaseModel):
     message: str
 
 
-def _extract_parts_from_event(event: dict) -> tuple[list[dict], str | None]:
-    """Extract ALL parts (text, file, data) and task_id from an A2A SSE event."""
+def _extract_parts_from_event(event: dict) -> tuple[list[dict], str | None, str | None]:
+    """Extract ALL parts (text, file, data), task_id, and contextId from an A2A SSE event."""
     parts = []
     task_id = None
     result = event.get("result", {})
     if not result:
-        return parts, task_id
+        return parts, task_id, None
     task_id = result.get("id") or result.get("taskId")
+    context_id = result.get("contextId")
 
     # From artifact parts
     artifact = result.get("artifact")
@@ -42,7 +43,7 @@ def _extract_parts_from_event(event: dict) -> tuple[list[dict], str | None]:
         if message and isinstance(message, dict):
             parts.extend(message.get("parts", []))
 
-    return parts, task_id
+    return parts, task_id, context_id
 
 
 @router.post("/{conversation_id}/")
@@ -92,18 +93,43 @@ async def chat_stream(
 
         try:
             if supports_streaming:
+                returned_context = None
                 async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
                     yield f"data: {json.dumps(event)}\n\n"
-                    parts, tid = _extract_parts_from_event(event)
+                    parts, tid, ctx = _extract_parts_from_event(event)
                     if parts:
                         collected_parts.extend(parts)
                     if tid:
                         task_id = tid
+                    if ctx:
+                        returned_context = ctx
+                # Update contextId if agent returned a different one
+                if returned_context and returned_context != context_id:
+                    async with async_session() as ctx_db:
+                        from sqlalchemy import update
+                        await ctx_db.execute(
+                            update(Conversation)
+                            .where(Conversation.id == conversation_id)
+                            .values(context_id=returned_context)
+                        )
+                        await ctx_db.commit()
             else:
                 # Non-streaming: use message/send and emit result as SSE events
                 resp = await send_message(agent_url, body.message, context_id, headers=agent_headers)
                 result = resp.get("result", {})
                 task_id = result.get("taskId")
+
+                # Update contextId if the agent returned one (important for Kibana)
+                returned_context = result.get("contextId")
+                if returned_context and returned_context != context_id:
+                    async with async_session() as ctx_db:
+                        from sqlalchemy import update
+                        await ctx_db.execute(
+                            update(Conversation)
+                            .where(Conversation.id == conversation_id)
+                            .values(context_id=returned_context)
+                        )
+                        await ctx_db.commit()
 
                 # Collect ALL parts from the response
                 all_parts: list[dict] = []

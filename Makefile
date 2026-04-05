@@ -6,7 +6,6 @@ UI_DIR := ui
 # Read BASE_PATH from .env if it exists
 -include .env
 export BASE_PATH
-VITE_BASE_PATH := $(if $(BASE_PATH),$(BASE_PATH)/,/)
 
 .PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy
 
@@ -24,8 +23,8 @@ start:
 	@echo "Starting backend on :8000 and frontend on :5173"
 	@echo "BASE_PATH=$(BASE_PATH)"
 	cd $(BACKEND_DIR) && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
-	cd $(UI_DIR) && VITE_BASE_PATH=$(VITE_BASE_PATH) npm run dev &
-	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173$(VITE_BASE_PATH)"
+	cd $(UI_DIR) && VITE_BASE_PATH=$(BASE_PATH) npm run dev &
+	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173$(BASE_PATH)/"
 
 stop:
 	@# Kill processes on backend and frontend ports
