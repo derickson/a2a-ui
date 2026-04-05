@@ -40,6 +40,9 @@ async def health():
 
 
 # Serve frontend static files in production
-ui_dist = Path(__file__).resolve().parent.parent / "ui" / "dist"
-if ui_dist.is_dir():
-    app.mount("/", StaticFiles(directory=str(ui_dist), html=True), name="static")
+# Check both Docker path (ui-dist alongside backend) and dev build path (../ui/dist)
+_here = Path(__file__).resolve().parent
+for _candidate in [_here / "ui-dist", _here.parent / "ui" / "dist"]:
+    if _candidate.is_dir():
+        app.mount("/", StaticFiles(directory=str(_candidate), html=True), name="static")
+        break

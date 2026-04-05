@@ -9,7 +9,7 @@ init:
 	# Python venv
 	uv venv $(VENV_DIR) --python 3.11
 	ln -sfn $(VENV_DIR) $(VENV_LINK)
-	cd $(BACKEND_DIR) && uv pip install -e "."
+	uv pip install fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic
 	# Node deps
 	cd $(UI_DIR) && npm install
 	# Init DB
