@@ -1,35 +1,32 @@
 import { useState, useCallback, useRef } from 'react';
-import type { Message } from '../types';
+import type { Message, A2APart, TextPart } from '../types';
 import { getConversation, sendMessage as sendChatMessage } from '../api/client';
 
-function extractTextFromEvent(data: string): string {
+function extractPartsFromEvent(data: string): A2APart[] {
   try {
     const parsed = JSON.parse(data);
     const result = parsed.result;
-    if (!result) return '';
+    if (!result) return [];
 
-    // Handle artifact-update events
     if (result.kind === 'artifact-update' && result.artifact) {
-      const parts = result.artifact.parts ?? [];
-      return parts
-        .filter((p: Record<string, unknown>) => p.kind === 'text' || 'text' in p)
-        .map((p: Record<string, unknown>) => p.text ?? '')
-        .join('');
+      return result.artifact.parts ?? [];
     }
 
-    // Handle status-update with message parts
     if (result.kind === 'status-update' && result.status?.message) {
-      const parts = result.status.message.parts ?? [];
-      return parts
-        .filter((p: Record<string, unknown>) => p.kind === 'text' || 'text' in p)
-        .map((p: Record<string, unknown>) => p.text ?? '')
-        .join('');
+      return result.status.message.parts ?? [];
     }
 
-    return '';
+    return [];
   } catch {
-    return '';
+    return [];
   }
+}
+
+function textFromParts(parts: A2APart[]): string {
+  return parts
+    .filter((p): p is TextPart => p.kind === 'text')
+    .map((p) => p.text)
+    .join('');
 }
 
 export function useChat() {
@@ -63,6 +60,7 @@ export function useChat() {
       abortRef.current = controller;
 
       let accumulated = '';
+      let accumulatedParts: A2APart[] = [];
 
       try {
         await sendChatMessage(
@@ -71,9 +69,10 @@ export function useChat() {
           (event) => {
             if (event.type === 'done') return;
 
-            const chunk = extractTextFromEvent(event.data);
-            if (chunk) {
-              accumulated += chunk;
+            const newParts = extractPartsFromEvent(event.data);
+            if (newParts.length > 0) {
+              accumulatedParts.push(...newParts);
+              accumulated = textFromParts(accumulatedParts);
               setStreamingContent(accumulated);
             }
           },
@@ -86,12 +85,13 @@ export function useChat() {
         }
       }
 
-      if (accumulated) {
+      if (accumulated || accumulatedParts.length > 0) {
         const agentMessage: Message = {
           id: `temp-agent-${Date.now()}`,
           conversation_id: conversationId,
           role: 'agent',
           content: accumulated,
+          parts: accumulatedParts.length > 0 ? accumulatedParts : undefined,
           task_id: null,
           created_at: new Date().toISOString(),
         };
