@@ -22,7 +22,7 @@ class DiscoverRequest(BaseModel):
     url: str
 
 
-@router.get("/")
+@router.get("")
 async def list_agents(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Agent).order_by(Agent.created_at.desc()))
     agents = result.scalars().all()
@@ -39,7 +39,7 @@ async def list_agents(db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.post("/")
+@router.post("")
 async def create_agent(body: AgentCreate, db: AsyncSession = Depends(get_db)):
     try:
         card = await fetch_agent_card(body.url)
