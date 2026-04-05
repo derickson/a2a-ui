@@ -115,9 +115,12 @@ export function ConversationList({
           conversations.map((c) => {
             const isActive = c.id === activeConversationId;
             return (
-              <button
+              <div
                 key={c.id}
+                role="button"
+                tabIndex={0}
                 onClick={() => onSelectConversation(c.id)}
+                onKeyDown={(e) => { if (e.key === 'Enter') onSelectConversation(c.id); }}
                 css={css`
                   display: flex;
                   align-items: center;
@@ -184,7 +187,7 @@ export function ConversationList({
                     }}
                   />
                 </div>
-              </button>
+              </div>
             );
           })
         )}
