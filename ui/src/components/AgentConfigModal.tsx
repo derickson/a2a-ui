@@ -23,7 +23,6 @@ import {
   EuiButtonIcon,
   EuiSelect,
   EuiFieldPassword,
-  EuiAccordion,
 } from '@elastic/eui';
 import { css } from '@emotion/react';
 import type { Agent, AgentCard, ElasticAgent, KibanaServer } from '../types';
@@ -61,6 +60,8 @@ export function AgentConfigModal({
   const [adding, setAdding] = useState(false);
   const [card, setCard] = useState<AgentCard | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [showAuthHeaders, setShowAuthHeaders] = useState(false);
+  const [showAddKibana, setShowAddKibana] = useState(false);
 
   // Auth state
   const [authType, setAuthType] = useState<string>('none');
@@ -295,11 +296,16 @@ export function AgentConfigModal({
 
         {/* Authentication & Headers */}
         <EuiSpacer size="m" />
-        <EuiAccordion
-          id="auth-headers-accordion"
-          buttonContent="Authentication & Headers"
-          paddingSize="m"
+        <EuiButtonEmpty
+          size="xs"
+          iconType={showAuthHeaders ? 'arrowDown' : 'arrowRight'}
+          onClick={() => setShowAuthHeaders(!showAuthHeaders)}
+          flush="left"
         >
+          Authentication &amp; Headers
+        </EuiButtonEmpty>
+        {showAuthHeaders && (
+          <div css={css`padding: 8px 0 0 8px;`}>
           <EuiFormRow label="Auth Type">
             <EuiSelect
               options={AUTH_OPTIONS}
@@ -423,7 +429,8 @@ export function AgentConfigModal({
           >
             Add Header
           </EuiButtonEmpty>
-        </EuiAccordion>
+          </div>
+        )}
 
         {error && (
           <>
@@ -549,52 +556,58 @@ export function AgentConfigModal({
 
         {/* Add new Kibana server */}
         <EuiSpacer size="s" />
-        <EuiAccordion
-          id="add-kibana-accordion"
-          buttonContent="Add Kibana Server"
-          paddingSize="s"
+        <EuiButtonEmpty
+          size="xs"
+          iconType={showAddKibana ? 'arrowDown' : 'arrowRight'}
+          onClick={() => setShowAddKibana(!showAddKibana)}
+          flush="left"
         >
-          <EuiFormRow label="Name">
-            <EuiFieldText
-              fullWidth
-              compressed
-              placeholder="My Kibana"
-              value={newKibanaName}
-              onChange={(e) => setNewKibanaName(e.target.value)}
-            />
-          </EuiFormRow>
-          <EuiSpacer size="xs" />
-          <EuiFormRow label="Kibana URL">
-            <EuiFieldText
-              fullWidth
-              compressed
-              placeholder="https://my-kibana.example.com"
-              value={newKibanaUrl}
-              onChange={(e) => setNewKibanaUrl(e.target.value)}
-            />
-          </EuiFormRow>
-          <EuiSpacer size="xs" />
-          <EuiFormRow label="API Key">
-            <EuiFieldPassword
-              type="dual"
-              fullWidth
-              compressed
-              placeholder="Elasticsearch API key"
-              value={newKibanaKey}
-              onChange={(e) => setNewKibanaKey(e.target.value)}
-            />
-          </EuiFormRow>
-          <EuiSpacer size="s" />
-          <EuiButton
-            size="s"
-            fill
-            onClick={handleAddKibana}
-            isLoading={addingKibana}
-            isDisabled={!newKibanaName.trim() || !newKibanaUrl.trim() || !newKibanaKey.trim()}
-          >
-            Save Server
-          </EuiButton>
-        </EuiAccordion>
+          Add Kibana Server
+        </EuiButtonEmpty>
+        {showAddKibana && (
+          <div css={css`padding: 8px 0 0 8px;`}>
+            <EuiFormRow label="Name">
+              <EuiFieldText
+                fullWidth
+                compressed
+                placeholder="My Kibana"
+                value={newKibanaName}
+                onChange={(e) => setNewKibanaName(e.target.value)}
+              />
+            </EuiFormRow>
+            <EuiSpacer size="xs" />
+            <EuiFormRow label="Kibana URL">
+              <EuiFieldText
+                fullWidth
+                compressed
+                placeholder="https://my-kibana.example.com"
+                value={newKibanaUrl}
+                onChange={(e) => setNewKibanaUrl(e.target.value)}
+              />
+            </EuiFormRow>
+            <EuiSpacer size="xs" />
+            <EuiFormRow label="API Key">
+              <EuiFieldPassword
+                type="dual"
+                fullWidth
+                compressed
+                placeholder="Elasticsearch API key"
+                value={newKibanaKey}
+                onChange={(e) => setNewKibanaKey(e.target.value)}
+              />
+            </EuiFormRow>
+            <EuiSpacer size="s" />
+            <EuiButton
+              size="s"
+              fill
+              onClick={handleAddKibana}
+              isLoading={addingKibana}
+              isDisabled={!newKibanaName.trim() || !newKibanaUrl.trim() || !newKibanaKey.trim()}
+            >
+              Save Server
+            </EuiButton>
+          </div>
+        )}
       </EuiModalBody>
 
       <EuiModalFooter>
