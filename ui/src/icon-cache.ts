@@ -10,6 +10,8 @@ import { icon as arrowDown } from '@elastic/eui/es/components/icon/assets/arrow_
 import { icon as arrowRight } from '@elastic/eui/es/components/icon/assets/arrow_right';
 import { icon as compute } from '@elastic/eui/es/components/icon/assets/compute';
 import { icon as cross } from '@elastic/eui/es/components/icon/assets/cross';
+import { icon as eye } from '@elastic/eui/es/components/icon/assets/eye';
+import { icon as eyeClosed } from '@elastic/eui/es/components/icon/assets/eye_closed';
 import { icon as discuss } from '@elastic/eui/es/components/icon/assets/discuss';
 import { icon as gear } from '@elastic/eui/es/components/icon/assets/gear';
 import { icon as menu } from '@elastic/eui/es/components/icon/assets/menu';
@@ -27,6 +29,8 @@ appendIconComponentCache({
   arrowRight,
   compute,
   cross,
+  eye,
+  eyeClosed,
   discuss,
   gear,
   menu,
