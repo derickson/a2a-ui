@@ -26,7 +26,7 @@ async def send_message(
         "params": {
             "message": {
                 "role": "user",
-                "parts": [{"text": message}],
+                "parts": [{"kind": "text", "text": message}],
                 "messageId": str(uuid.uuid4()),
             },
         },
@@ -51,7 +51,7 @@ async def stream_message(
         "params": {
             "message": {
                 "role": "user",
-                "parts": [{"text": message}],
+                "parts": [{"kind": "text", "text": message}],
                 "messageId": str(uuid.uuid4()),
             },
         },
