@@ -11,7 +11,7 @@ WORKDIR /app
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
 COPY backend/pyproject.toml ./
-RUN uv pip install --system --no-cache -e "." 2>/dev/null || uv pip install --system --no-cache fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic
+RUN uv pip install --system --no-cache -e "." 2>/dev/null || uv pip install --system --no-cache fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic pydantic-settings python-dotenv
 
 COPY backend/ ./
 COPY --from=frontend /build/dist /app/ui-dist

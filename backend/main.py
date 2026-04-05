@@ -6,10 +6,13 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 
+from config import get_settings
 from database import init_db
 from routes.agents import router as agents_router
+from routes.app_config import router as config_router
 from routes.chat import router as chat_router
 from routes.conversations import router as conversations_router
+from routes.elastic import router as elastic_router
 
 
 @asynccontextmanager
@@ -18,7 +21,12 @@ async def lifespan(app: FastAPI):
     yield
 
 
-app = FastAPI(title="Hermes A2A Chat", lifespan=lifespan)
+settings = get_settings()
+app = FastAPI(
+    title="Hermes A2A Chat",
+    lifespan=lifespan,
+    **({"root_path": settings.base_path} if settings.base_path else {}),
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -32,6 +40,8 @@ app.add_middleware(
 app.include_router(agents_router)
 app.include_router(conversations_router)
 app.include_router(chat_router)
+app.include_router(elastic_router)
+app.include_router(config_router)
 
 
 @app.get("/api/health/")

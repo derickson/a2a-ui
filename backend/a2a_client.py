@@ -7,17 +7,17 @@ from collections.abc import AsyncGenerator
 import httpx
 
 
-async def fetch_agent_card(base_url: str) -> dict:
+async def fetch_agent_card(base_url: str, headers: dict[str, str] | None = None) -> dict:
     """GET {base_url}/.well-known/agent-card.json and return parsed JSON."""
     url = f"{base_url.rstrip('/')}/.well-known/agent-card.json"
-    async with httpx.AsyncClient(timeout=10.0) as client:
+    async with httpx.AsyncClient(timeout=10.0, headers=headers or {}) as client:
         resp = await client.get(url)
         resp.raise_for_status()
         return resp.json()
 
 
 async def send_message(
-    agent_url: str, message: str, context_id: str | None = None
+    agent_url: str, message: str, context_id: str | None = None, headers: dict[str, str] | None = None
 ) -> dict:
     """Send a JSON-RPC message/send request and return the parsed response."""
     payload = {
@@ -35,14 +35,14 @@ async def send_message(
     if context_id:
         payload["params"]["contextId"] = context_id
 
-    async with httpx.AsyncClient(timeout=60.0) as client:
+    async with httpx.AsyncClient(timeout=60.0, headers=headers or {}) as client:
         resp = await client.post(agent_url, json=payload)
         resp.raise_for_status()
         return resp.json()
 
 
 async def stream_message(
-    agent_url: str, message: str, context_id: str | None = None
+    agent_url: str, message: str, context_id: str | None = None, headers: dict[str, str] | None = None
 ) -> AsyncGenerator[dict, None]:
     """Send a JSON-RPC message/stream request and yield parsed SSE events."""
     payload = {
@@ -60,7 +60,7 @@ async def stream_message(
     if context_id:
         payload["params"]["contextId"] = context_id
 
-    async with httpx.AsyncClient(timeout=300.0) as client:
+    async with httpx.AsyncClient(timeout=300.0, headers=headers or {}) as client:
         async with client.stream("POST", agent_url, json=payload) as resp:
             resp.raise_for_status()
             buffer = ""
