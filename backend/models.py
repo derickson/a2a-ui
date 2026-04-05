@@ -25,6 +25,7 @@ class Agent(Base):
     url = Column(String, nullable=False, unique=True)
     description = Column(Text, default="")
     card_json = Column(Text, default="{}")
+    headers_json = Column(Text, default="{}")
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 
     conversations = relationship("Conversation", back_populates="agent", cascade="all, delete-orphan")

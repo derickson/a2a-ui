@@ -79,6 +79,7 @@ async def chat_stream(
 
     agent_url = conv.agent.url
     context_id = conv.context_id
+    agent_headers = json.loads(conv.agent.headers_json) if conv.agent.headers_json else {}
 
     # Save user message
     user_msg = Message(
@@ -100,7 +101,7 @@ async def chat_stream(
         task_id = None
 
         try:
-            async for event in stream_message(agent_url, body.message, context_id):
+            async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
                 # Forward the raw event to the client
                 yield f"data: {json.dumps(event)}\n\n"
 
