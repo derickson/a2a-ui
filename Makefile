@@ -3,9 +3,11 @@ VENV_LINK := .venv
 BACKEND_DIR := backend
 UI_DIR := ui
 
-# Read BASE_PATH from .env if it exists
+# Read env vars from .env if it exists
 -include .env
 export BASE_PATH
+PORT ?= 8000
+export PORT
 
 .PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy
 
@@ -20,25 +22,25 @@ init:
 	cd $(BACKEND_DIR) && uv run python -c "import asyncio; from database import init_db; asyncio.run(init_db())"
 
 start:
-	@echo "Starting backend on :8000 and frontend on :5173"
+	@echo "Starting backend on :$(PORT) and frontend on :5173"
 	@echo "BASE_PATH=$(BASE_PATH)"
-	cd $(BACKEND_DIR) && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
-	cd $(UI_DIR) && VITE_BASE_PATH=$(BASE_PATH) npm run dev &
-	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173$(BASE_PATH)/"
+	cd $(BACKEND_DIR) && uv run uvicorn main:app --reload --host 0.0.0.0 --port $(PORT) &
+	cd $(UI_DIR) && VITE_BASE_PATH=$(BASE_PATH) VITE_BACKEND_PORT=$(PORT) npm run dev &
+	@echo "Backend: http://localhost:$(PORT)  Frontend: http://localhost:5173$(BASE_PATH)/"
 
 stop:
 	@# Kill processes on backend and frontend ports
-	-lsof -ti :8000 | xargs kill 2>/dev/null || true
+	-lsof -ti :$(PORT) | xargs kill 2>/dev/null || true
 	-lsof -ti :5173 | xargs kill 2>/dev/null || true
 	@sleep 1
-	-lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+	-lsof -ti :$(PORT) | xargs kill -9 2>/dev/null || true
 	-lsof -ti :5173 | xargs kill -9 2>/dev/null || true
 
 status:
-	@echo "=== Backend (port 8000) ==="
+	@echo "=== Backend (port $(PORT)) ==="
 	@if pgrep -f "uvicorn main:app" > /dev/null 2>&1; then \
 		echo "  PID: $$(pgrep -f 'uvicorn main:app' | head -1)"; \
-		curl -s --max-time 2 http://localhost:8000$(BASE_PATH)/api/health/ && echo "" || echo "  Not responding"; \
+		curl -s --max-time 2 http://localhost:$(PORT)$(BASE_PATH)/api/health/ && echo "" || echo "  Not responding"; \
 	else \
 		echo "  Not running"; \
 	fi
