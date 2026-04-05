@@ -22,7 +22,7 @@ class DiscoverRequest(BaseModel):
     url: str
 
 
-@router.get("")
+@router.get("/")
 async def list_agents(db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Agent).order_by(Agent.created_at.desc()))
     agents = result.scalars().all()
@@ -39,7 +39,7 @@ async def list_agents(db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.post("")
+@router.post("/")
 async def create_agent(body: AgentCreate, db: AsyncSession = Depends(get_db)):
     try:
         card = await fetch_agent_card(body.url)
@@ -65,7 +65,7 @@ async def create_agent(body: AgentCreate, db: AsyncSession = Depends(get_db)):
     }
 
 
-@router.delete("/{agent_id}")
+@router.delete("/{agent_id}/")
 async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(select(Agent).where(Agent.id == agent_id))
     agent = result.scalar_one_or_none()
@@ -76,7 +76,7 @@ async def delete_agent(agent_id: str, db: AsyncSession = Depends(get_db)):
     return {"ok": True}
 
 
-@router.post("/discover")
+@router.post("/discover/")
 async def discover_agent(body: DiscoverRequest):
     try:
         card = await fetch_agent_card(body.url)

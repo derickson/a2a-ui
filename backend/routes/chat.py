@@ -59,7 +59,7 @@ def _extract_text_from_event(event: dict) -> tuple[str, str | None]:
     return text, task_id
 
 
-@router.post("/{conversation_id}")
+@router.post("/{conversation_id}/")
 async def chat_stream(
     conversation_id: str,
     body: ChatMessage,

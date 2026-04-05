@@ -16,22 +16,22 @@ async function request<T>(path: string, options?: RequestInit): Promise<T> {
 
 // Agents
 export function getAgents(): Promise<Agent[]> {
-  return request<Agent[]>('/agents');
+  return request<Agent[]>('/agents/');
 }
 
 export function addAgent(url: string): Promise<Agent> {
-  return request<Agent>('/agents', {
+  return request<Agent>('/agents/', {
     method: 'POST',
     body: JSON.stringify({ url }),
   });
 }
 
 export function deleteAgent(id: string): Promise<void> {
-  return request<void>(`/agents/${id}`, { method: 'DELETE' });
+  return request<void>(`/agents/${id}/`, { method: 'DELETE' });
 }
 
 export function discoverAgent(url: string): Promise<AgentCard> {
-  return request<AgentCard>('/agents/discover', {
+  return request<AgentCard>('/agents/discover/', {
     method: 'POST',
     body: JSON.stringify({ url }),
   });
@@ -39,25 +39,25 @@ export function discoverAgent(url: string): Promise<AgentCard> {
 
 // Conversations
 export function getConversations(): Promise<Conversation[]> {
-  return request<Conversation[]>('/conversations');
+  return request<Conversation[]>('/conversations/');
 }
 
 export function getConversation(id: string): Promise<Conversation> {
-  return request<Conversation>(`/conversations/${id}`);
+  return request<Conversation>(`/conversations/${id}/`);
 }
 
 export function createConversation(
   agentId: string,
   title?: string,
 ): Promise<Conversation> {
-  return request<Conversation>('/conversations', {
+  return request<Conversation>('/conversations/', {
     method: 'POST',
     body: JSON.stringify({ agent_id: agentId, title }),
   });
 }
 
 export function deleteConversation(id: string): Promise<void> {
-  return request<void>(`/conversations/${id}`, { method: 'DELETE' });
+  return request<void>(`/conversations/${id}/`, { method: 'DELETE' });
 }
 
 // Chat — SSE streaming via POST
@@ -67,7 +67,7 @@ export async function sendMessage(
   onEvent: (event: { type: string; data: string }) => void,
   signal?: AbortSignal,
 ): Promise<void> {
-  const res = await fetch(`${BASE}/chat/${conversationId}`, {
+  const res = await fetch(`${BASE}/chat/${conversationId}/`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ message }),

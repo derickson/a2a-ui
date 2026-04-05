@@ -20,7 +20,7 @@ class ConversationCreate(BaseModel):
     title: str | None = None
 
 
-@router.get("")
+@router.get("/")
 async def list_conversations(db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Conversation)
@@ -49,7 +49,7 @@ async def list_conversations(db: AsyncSession = Depends(get_db)):
     ]
 
 
-@router.get("/{conversation_id}")
+@router.get("/{conversation_id}/")
 async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_db)):
     result = await db.execute(
         select(Conversation)
@@ -87,7 +87,7 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
     }
 
 
-@router.post("")
+@router.post("/")
 async def create_conversation(
     body: ConversationCreate, db: AsyncSession = Depends(get_db)
 ):
@@ -121,7 +121,7 @@ async def create_conversation(
     }
 
 
-@router.delete("/{conversation_id}")
+@router.delete("/{conversation_id}/")
 async def delete_conversation(
     conversation_id: str, db: AsyncSession = Depends(get_db)
 ):
