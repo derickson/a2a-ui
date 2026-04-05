@@ -1,4 +1,4 @@
-VENV_DIR := $(HOME)/dev/.venvs/hermes-a2a-app
+VENV_DIR := $(HOME)/dev/.venvs/a2a-ui
 VENV_LINK := .venv
 BACKEND_DIR := backend
 UI_DIR := ui
@@ -9,7 +9,7 @@ init:
 	# Python venv
 	uv venv $(VENV_DIR) --python 3.11
 	ln -sfn $(VENV_DIR) $(VENV_LINK)
-	uv pip install fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic
+	uv pip install fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic pydantic-settings python-dotenv
 	# Node deps
 	cd $(UI_DIR) && npm install
 	# Init DB
