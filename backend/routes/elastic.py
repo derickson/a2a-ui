@@ -86,7 +86,9 @@ async def list_elastic_agents(server_id: str, db: AsyncSession = Depends(get_db)
         async with httpx.AsyncClient(timeout=30.0, headers=headers) as client:
             resp = await client.get(url)
             resp.raise_for_status()
-            return resp.json()
+            data = resp.json()
+            # Kibana wraps the list in {"results": [...]}
+            return data.get("results", data) if isinstance(data, dict) else data
     except httpx.HTTPStatusError as e:
         raise HTTPException(status_code=e.response.status_code, detail=f"Kibana error: {e.response.text}")
     except httpx.RequestError as e:
