@@ -26,7 +26,11 @@ async def init_db():
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
         # Safe migration: add headers_json column if it doesn't exist
-        try:
-            await conn.execute(text("ALTER TABLE agents ADD COLUMN headers_json TEXT DEFAULT '{}'"))
-        except Exception:
-            pass  # Column already exists
+        for migration in [
+            "ALTER TABLE agents ADD COLUMN headers_json TEXT DEFAULT '{}'",
+            "ALTER TABLE messages ADD COLUMN parts_json TEXT",
+        ]:
+            try:
+                await conn.execute(text(migration))
+            except Exception:
+                pass  # Column already exists
