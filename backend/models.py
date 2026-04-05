@@ -62,6 +62,7 @@ class Message(Base):
     conversation_id = Column(String, ForeignKey("conversations.id"), nullable=False)
     role = Column(String, nullable=False)  # "user" or "agent"
     content = Column(Text, nullable=False)
+    parts_json = Column(Text, nullable=True)
     task_id = Column(String, nullable=True)
     created_at = Column(DateTime(timezone=True), default=_utcnow)
 

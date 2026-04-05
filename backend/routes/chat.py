@@ -21,42 +21,28 @@ class ChatMessage(BaseModel):
     message: str
 
 
-def _extract_text_from_event(event: dict) -> tuple[str, str | None]:
-    """Extract text content and task_id from an A2A SSE event.
-
-    Returns (text, task_id) where text may be empty.
-    """
-    text = ""
+def _extract_parts_from_event(event: dict) -> tuple[list[dict], str | None]:
+    """Extract ALL parts (text, file, data) and task_id from an A2A SSE event."""
+    parts = []
     task_id = None
-
     result = event.get("result", {})
     if not result:
-        return text, task_id
-
-    # Extract task ID if present
+        return parts, task_id
     task_id = result.get("id") or result.get("taskId")
 
-    # Check for artifacts containing text parts
-    status = result.get("status", {})
+    # From artifact parts
     artifact = result.get("artifact")
-
-    # Text from artifact parts
     if artifact:
-        parts = artifact.get("parts", [])
-        for part in parts:
-            if "text" in part:
-                text += part["text"]
+        parts.extend(artifact.get("parts", []))
 
-    # Also check status message parts (some agents send text here)
+    # From status message parts
+    status = result.get("status", {})
     if status and isinstance(status, dict):
         message = status.get("message")
         if message and isinstance(message, dict):
-            parts = message.get("parts", [])
-            for part in parts:
-                if "text" in part:
-                    text += part["text"]
+            parts.extend(message.get("parts", []))
 
-    return text, task_id
+    return parts, task_id
 
 
 @router.post("/{conversation_id}/")
@@ -101,16 +87,16 @@ async def chat_stream(
     await db.commit()
 
     async def event_generator():
-        collected_text = ""
+        collected_parts: list[dict] = []
         task_id = None
 
         try:
             if supports_streaming:
                 async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
                     yield f"data: {json.dumps(event)}\n\n"
-                    text, tid = _extract_text_from_event(event)
-                    if text:
-                        collected_text += text
+                    parts, tid = _extract_parts_from_event(event)
+                    if parts:
+                        collected_parts.extend(parts)
                     if tid:
                         task_id = tid
             else:
@@ -119,29 +105,25 @@ async def chat_stream(
                 result = resp.get("result", {})
                 task_id = result.get("taskId")
 
-                # Extract text from the response
-                # message/send response may have parts directly on result,
-                # or artifacts array, or nested message structure
+                # Collect ALL parts from the response
+                all_parts: list[dict] = []
                 parts = result.get("parts", [])
+                all_parts.extend(parts)
+
                 artifacts = result.get("artifacts", [])
-
-                for part in parts:
-                    if part.get("kind") == "text" or "text" in part:
-                        collected_text += part.get("text", "")
-
                 for artifact in artifacts:
-                    for part in artifact.get("parts", []):
-                        if part.get("kind") == "text" or "text" in part:
-                            collected_text += part.get("text", "")
+                    all_parts.extend(artifact.get("parts", []))
 
-                # Emit the full response as a single SSE event
-                if collected_text:
+                collected_parts = all_parts
+
+                # Emit the full response as a single SSE event with all parts
+                if collected_parts:
                     synth_event = {
                         "jsonrpc": "2.0",
                         "result": {
                             "kind": "artifact-update",
                             "artifact": {
-                                "parts": [{"kind": "text", "text": collected_text}]
+                                "parts": collected_parts,
                             },
                             "taskId": task_id,
                         },
@@ -151,15 +133,22 @@ async def chat_stream(
         except Exception as e:
             error_event = {"error": str(e)}
             yield f"data: {json.dumps(error_event)}\n\n"
-            collected_text = f"[Error communicating with agent: {e}]"
+            collected_parts = [{"kind": "text", "text": f"[Error communicating with agent: {e}]"}]
+
+        # Derive text for backward compatibility
+        collected_text = "".join(
+            p.get("text", "") for p in collected_parts
+            if p.get("kind") == "text" or "text" in p
+        )
 
         # Save agent response to DB after stream/send completes
-        if collected_text:
+        if collected_parts:
             async with async_session() as save_db:
                 agent_msg = Message(
                     conversation_id=conversation_id,
                     role="agent",
                     content=collected_text,
+                    parts_json=json.dumps(collected_parts),
                     task_id=task_id,
                 )
                 save_db.add(agent_msg)

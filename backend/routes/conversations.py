@@ -79,6 +79,7 @@ async def get_conversation(conversation_id: str, db: AsyncSession = Depends(get_
                 "id": m.id,
                 "role": m.role,
                 "content": m.content,
+                "parts": json.loads(m.parts_json) if m.parts_json else None,
                 "task_id": m.task_id,
                 "created_at": m.created_at.isoformat() if m.created_at else None,
             }
