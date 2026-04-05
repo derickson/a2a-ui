@@ -3,7 +3,7 @@ VENV_LINK := .venv
 BACKEND_DIR := backend
 UI_DIR := ui
 
-.PHONY: init start stop docker-build docker-start docker-stop docker-redeploy
+.PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy
 
 init:
 	# Python venv
@@ -24,6 +24,23 @@ start:
 stop:
 	-pkill -f "uvicorn main:app" 2>/dev/null || true
 	-pkill -f "vite" 2>/dev/null || true
+
+status:
+	@echo "=== Backend (port 8000) ==="
+	@if pgrep -f "uvicorn main:app" > /dev/null 2>&1; then \
+		echo "  PID: $$(pgrep -f 'uvicorn main:app' | head -1)"; \
+		curl -s --max-time 2 http://localhost:8000/api/health/ && echo "" || echo "  Not responding"; \
+	else \
+		echo "  Not running"; \
+	fi
+	@echo ""
+	@echo "=== Frontend (port 5173) ==="
+	@if pgrep -f "vite" > /dev/null 2>&1; then \
+		echo "  PID: $$(pgrep -f 'vite' | head -1)"; \
+		curl -s --max-time 2 -o /dev/null -w "  HTTP %{http_code} — http://localhost:5173\n" http://localhost:5173 || echo "  Not responding"; \
+	else \
+		echo "  Not running"; \
+	fi
 
 docker-build:
 	docker compose build
