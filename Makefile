@@ -3,6 +3,11 @@ VENV_LINK := .venv
 BACKEND_DIR := backend
 UI_DIR := ui
 
+# Read BASE_PATH from .env if it exists
+-include .env
+export BASE_PATH
+VITE_BASE_PATH := $(if $(BASE_PATH),$(BASE_PATH)/,/)
+
 .PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy
 
 init:
@@ -17,9 +22,10 @@ init:
 
 start:
 	@echo "Starting backend on :8000 and frontend on :5173"
+	@echo "BASE_PATH=$(BASE_PATH)"
 	cd $(BACKEND_DIR) && uv run uvicorn main:app --reload --host 0.0.0.0 --port 8000 &
-	cd $(UI_DIR) && npm run dev &
-	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173"
+	cd $(UI_DIR) && VITE_BASE_PATH=$(VITE_BASE_PATH) npm run dev &
+	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173$(VITE_BASE_PATH)"
 
 stop:
 	@# Kill processes on backend and frontend ports
@@ -33,7 +39,7 @@ status:
 	@echo "=== Backend (port 8000) ==="
 	@if pgrep -f "uvicorn main:app" > /dev/null 2>&1; then \
 		echo "  PID: $$(pgrep -f 'uvicorn main:app' | head -1)"; \
-		curl -s --max-time 2 http://localhost:8000/api/health/ && echo "" || echo "  Not responding"; \
+		curl -s --max-time 2 http://localhost:8000$(BASE_PATH)/api/health/ && echo "" || echo "  Not responding"; \
 	else \
 		echo "  Not running"; \
 	fi

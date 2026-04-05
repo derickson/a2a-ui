@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.routing import APIRouter
 
 from config import get_settings
 from database import init_db
@@ -23,11 +24,9 @@ async def lifespan(app: FastAPI):
 
 
 settings = get_settings()
-app = FastAPI(
-    title="A2A UI",
-    lifespan=lifespan,
-    **({"root_path": settings.base_path} if settings.base_path else {}),
-)
+base = settings.base_path.rstrip("/")  # e.g. "/a2a-ui" or ""
+
+app = FastAPI(title="A2A UI", lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -37,27 +36,29 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Include API routers
-app.include_router(agents_router)
-app.include_router(conversations_router)
-app.include_router(chat_router)
-app.include_router(elastic_router)
-app.include_router(config_router)
-app.include_router(files_router)
+# Wrap all existing routers (which already have /api/* prefixes)
+# under the base path prefix
+base_router = APIRouter(prefix=base)
+base_router.include_router(agents_router)
+base_router.include_router(conversations_router)
+base_router.include_router(chat_router)
+base_router.include_router(elastic_router)
+base_router.include_router(config_router)
+base_router.include_router(files_router)
 
 
-@app.get("/api/health/")
+@base_router.get("/api/health/")
 async def health():
     return {"status": "ok"}
 
 
-# Serve frontend static files in production (only when not in dev mode)
-# Check both Docker path (ui-dist alongside backend) and dev build path (../ui/dist)
-# Only mount if SERVE_STATIC env is set, to avoid shadowing API routes during dev
-import os as _os
-if _os.environ.get("SERVE_STATIC", "").lower() in ("1", "true", "yes"):
+app.include_router(base_router)
+
+# Serve frontend static files in production
+if os.environ.get("SERVE_STATIC", "").lower() in ("1", "true", "yes"):
     _here = Path(__file__).resolve().parent
     for _candidate in [_here / "ui-dist", _here.parent / "ui" / "dist"]:
         if _candidate.is_dir():
-            app.mount("/", StaticFiles(directory=str(_candidate), html=True), name="static")
+            mount_path = f"{base}/" if base else "/"
+            app.mount(mount_path, StaticFiles(directory=str(_candidate), html=True), name="static")
             break

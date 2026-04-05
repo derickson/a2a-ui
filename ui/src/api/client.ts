@@ -1,6 +1,8 @@
 import type { Agent, AgentCard, AppConfig, Conversation, ElasticAgent, KibanaServer, Message } from '../types';
 
-const BASE = '/api';
+// Derive API base from Vite's base URL (e.g. "/a2a-ui/" → "/a2a-ui/api")
+const _viteBase = import.meta.env.BASE_URL.replace(/\/+$/, ''); // strip trailing slash
+const BASE = `${_viteBase}/api`;
 
 async function request<T>(path: string, options?: RequestInit): Promise<T> {
   const res = await fetch(`${BASE}${path}`, {
