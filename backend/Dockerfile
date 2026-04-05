@@ -1,4 +1,6 @@
 FROM node:20-slim AS frontend
+ARG VITE_BASE_PATH=""
+ENV VITE_BASE_PATH=${VITE_BASE_PATH}
 WORKDIR /build
 COPY ui/package.json ui/package-lock.json ./
 RUN npm ci

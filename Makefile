@@ -9,7 +9,7 @@ export BASE_PATH
 PORT ?= 8000
 export PORT
 
-.PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy
+.PHONY: init start stop status docker-build docker-start docker-stop docker-redeploy docker-logs
 
 init:
 	# Python venv
@@ -65,3 +65,6 @@ docker-stop:
 docker-redeploy: docker-build
 	docker compose down
 	docker compose up -d
+
+docker-logs:
+	docker compose logs -f
