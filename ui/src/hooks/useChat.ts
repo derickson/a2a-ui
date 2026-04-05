@@ -71,7 +71,14 @@ export function useChat() {
 
             const newParts = extractPartsFromEvent(event.data);
             if (newParts.length > 0) {
-              accumulatedParts.push(...newParts);
+              for (const part of newParts) {
+                const last = accumulatedParts[accumulatedParts.length - 1];
+                if (part.kind === 'text' && last && last.kind === 'text') {
+                  last.text += part.text;
+                } else {
+                  accumulatedParts.push(part);
+                }
+              }
               accumulated = textFromParts(accumulatedParts);
               setStreamingContent(accumulated);
             }

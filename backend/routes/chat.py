@@ -21,6 +21,17 @@ class ChatMessage(BaseModel):
     message: str
 
 
+def _consolidate_text_parts(parts: list[dict]) -> list[dict]:
+    """Merge consecutive text parts into single parts."""
+    result: list[dict] = []
+    for part in parts:
+        if part.get("kind") == "text" and result and result[-1].get("kind") == "text":
+            result[-1] = {**result[-1], "text": result[-1]["text"] + part["text"]}
+        else:
+            result.append(part)
+    return result
+
+
 def _extract_parts_from_event(event: dict) -> tuple[list[dict], str | None, str | None]:
     """Extract ALL parts (text, file, data), task_id, and contextId from an A2A SSE event."""
     parts = []
@@ -199,7 +210,7 @@ async def chat_stream(
                     conversation_id=conversation_id,
                     role="agent",
                     content=collected_text,
-                    parts_json=json.dumps(collected_parts),
+                    parts_json=json.dumps(_consolidate_text_parts(collected_parts)),
                     task_id=task_id,
                 )
                 save_db.add(agent_msg)

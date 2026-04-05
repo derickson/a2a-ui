@@ -406,12 +406,26 @@ function renderSegments(segments: ContentSegment[]) {
   });
 }
 
+function consolidateTextParts(parts: A2APart[]): A2APart[] {
+  const result: A2APart[] = [];
+  for (const part of parts) {
+    const last = result[result.length - 1];
+    if (part.kind === 'text' && last && last.kind === 'text') {
+      result[result.length - 1] = { kind: 'text', text: last.text + part.text };
+    } else {
+      result.push(part);
+    }
+  }
+  return result;
+}
+
 export function MessageContent({ content, parts }: MessageContentProps) {
   // If parts are provided, render by part kind
   if (parts && parts.length > 0) {
+    const consolidated = consolidateTextParts(parts);
     return (
       <>
-        {parts.map((part, i) => {
+        {consolidated.map((part, i) => {
           if (part.kind === 'text') {
             const segments = parseContent(part.text);
             return <div key={i}>{renderSegments(segments)}</div>;
