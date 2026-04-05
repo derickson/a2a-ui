@@ -1,6 +1,9 @@
 import { useState } from 'react';
 import { EuiBadge, EuiText, EuiIcon } from '@elastic/eui';
 import { css } from '@emotion/react';
+import ReactMarkdown from 'react-markdown';
+import rehypeSanitize from 'rehype-sanitize';
+import remarkGfm from 'remark-gfm';
 
 interface MessageContentProps {
   content: string;
@@ -196,9 +199,27 @@ export function MessageContent({ content }: MessageContentProps) {
           return <ToolChiclet key={i} segment={segment} />;
         }
         return (
-          <span key={i} css={css`white-space: pre-wrap;`}>
+          <ReactMarkdown
+            key={i}
+            remarkPlugins={[remarkGfm]}
+            rehypePlugins={[rehypeSanitize]}
+            components={{
+              p: ({children}) => <p css={css`margin: 0 0 0.5em; &:last-child { margin-bottom: 0; }`}>{children}</p>,
+              code: ({className, children, ...props}) => {
+                const isBlock = className?.startsWith('language-');
+                return isBlock
+                  ? <pre css={css`background: rgba(128,128,128,0.1); padding: 12px; border-radius: 6px; overflow-x: auto; font-size: 0.85em;`}><code {...props}>{children}</code></pre>
+                  : <code css={css`background: rgba(128,128,128,0.1); padding: 0.1em 0.4em; border-radius: 4px; font-size: 0.9em;`} {...props}>{children}</code>;
+              },
+              pre: ({children}) => <>{children}</>,
+              a: ({children, href}) => <a href={href} target="_blank" rel="noopener noreferrer" css={css`color: var(--euiColorPrimary);`}>{children}</a>,
+              ul: ({children}) => <ul css={css`margin: 0.5em 0; padding-left: 1.5em;`}>{children}</ul>,
+              ol: ({children}) => <ol css={css`margin: 0.5em 0; padding-left: 1.5em;`}>{children}</ol>,
+              table: ({children}) => <table css={css`border-collapse: collapse; width: 100%; margin: 0.5em 0; & th, & td { border: 1px solid rgba(128,128,128,0.3); padding: 6px 10px; text-align: left; }`}>{children}</table>,
+            }}
+          >
             {segment.text}
-          </span>
+          </ReactMarkdown>
         );
       })}
     </>

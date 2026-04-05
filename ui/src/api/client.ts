@@ -1,4 +1,4 @@
-import type { Agent, AgentCard, Conversation, Message } from '../types';
+import type { Agent, AgentCard, AppConfig, Conversation, ElasticAgent, Message } from '../types';
 
 const BASE = '/api';
 
@@ -19,10 +19,10 @@ export function getAgents(): Promise<Agent[]> {
   return request<Agent[]>('/agents/');
 }
 
-export function addAgent(url: string): Promise<Agent> {
+export function addAgent(url: string, headers?: Record<string, string>): Promise<Agent> {
   return request<Agent>('/agents/', {
     method: 'POST',
-    body: JSON.stringify({ url }),
+    body: JSON.stringify({ url, headers }),
   });
 }
 
@@ -114,6 +114,27 @@ export async function sendMessage(
   }
   // Stream ended without [DONE]
   onEvent({ type: 'done', data: '' });
+}
+
+// Config
+export function getConfig(): Promise<AppConfig> {
+  return request<AppConfig>('/config/');
+}
+
+// Elastic Agent Discovery
+export function getElasticAgents(): Promise<ElasticAgent[]> {
+  return request<ElasticAgent[]>('/elastic/agents/');
+}
+
+export function importElasticAgent(agentId: string): Promise<Agent> {
+  return request<Agent>(`/elastic/agents/${agentId}/import/`, { method: 'POST' });
+}
+
+export function updateAgentHeaders(id: string, headers: Record<string, string>): Promise<Agent> {
+  return request<Agent>(`/agents/${id}/`, {
+    method: 'PUT',
+    body: JSON.stringify({ headers }),
+  });
 }
 
 // Re-export Message type for convenience

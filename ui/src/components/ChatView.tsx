@@ -62,7 +62,7 @@ export function ChatView({
       >
         <EuiEmptyPrompt
           iconType="discuss"
-          title={<h2>Hermes A2A Chat</h2>}
+          title={<h2>A2A UI</h2>}
           body={<p>Select a conversation or start a new chat to begin.</p>}
         />
       </div>
