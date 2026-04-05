@@ -22,8 +22,12 @@ start:
 	@echo "Backend: http://localhost:8000  Frontend: http://localhost:5173"
 
 stop:
-	-pkill -f "uvicorn main:app" 2>/dev/null || true
-	-pkill -f "vite" 2>/dev/null || true
+	@# Kill processes on backend and frontend ports
+	-lsof -ti :8000 | xargs kill 2>/dev/null || true
+	-lsof -ti :5173 | xargs kill 2>/dev/null || true
+	@sleep 1
+	-lsof -ti :8000 | xargs kill -9 2>/dev/null || true
+	-lsof -ti :5173 | xargs kill -9 2>/dev/null || true
 
 status:
 	@echo "=== Backend (port 8000) ==="
