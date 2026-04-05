@@ -10,12 +10,6 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     base_path: str = ""
-    kibana_url: str = ""
-    elasticsearch_api_key: str = ""
-
-    @property
-    def elastic_enabled(self) -> bool:
-        return bool(self.kibana_url and self.elasticsearch_api_key)
 
 
 @lru_cache

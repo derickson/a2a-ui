@@ -1,4 +1,4 @@
-import type { Agent, AgentCard, AppConfig, Conversation, ElasticAgent, Message } from '../types';
+import type { Agent, AgentCard, AppConfig, Conversation, ElasticAgent, KibanaServer, Message } from '../types';
 
 const BASE = '/api';
 
@@ -121,13 +121,29 @@ export function getConfig(): Promise<AppConfig> {
   return request<AppConfig>('/config/');
 }
 
-// Elastic Agent Discovery
-export function getElasticAgents(): Promise<ElasticAgent[]> {
-  return request<ElasticAgent[]>('/elastic/agents/');
+// Kibana Servers
+export function getKibanaServers(): Promise<KibanaServer[]> {
+  return request<KibanaServer[]>('/elastic/kibana-servers/');
 }
 
-export function importElasticAgent(agentId: string): Promise<Agent> {
-  return request<Agent>(`/elastic/agents/${agentId}/import/`, { method: 'POST' });
+export function addKibanaServer(name: string, url: string, apiKey: string): Promise<KibanaServer> {
+  return request<KibanaServer>('/elastic/kibana-servers/', {
+    method: 'POST',
+    body: JSON.stringify({ name, url, api_key: apiKey }),
+  });
+}
+
+export function deleteKibanaServer(id: string): Promise<void> {
+  return request<void>(`/elastic/kibana-servers/${id}/`, { method: 'DELETE' });
+}
+
+// Elastic Agent Discovery (per Kibana server)
+export function getElasticAgents(serverId: string): Promise<ElasticAgent[]> {
+  return request<ElasticAgent[]>(`/elastic/kibana-servers/${serverId}/agents/`);
+}
+
+export function importElasticAgent(serverId: string, agentId: string): Promise<Agent> {
+  return request<Agent>(`/elastic/kibana-servers/${serverId}/agents/${agentId}/import/`, { method: 'POST' });
 }
 
 export function updateAgentHeaders(id: string, headers: Record<string, string>): Promise<Agent> {

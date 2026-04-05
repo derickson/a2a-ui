@@ -26,12 +26,14 @@ import {
   EuiAccordion,
 } from '@elastic/eui';
 import { css } from '@emotion/react';
-import type { Agent, AgentCard, ElasticAgent } from '../types';
+import type { Agent, AgentCard, ElasticAgent, KibanaServer } from '../types';
 import {
   discoverAgent,
   addAgent,
   deleteAgent,
-  getConfig,
+  getKibanaServers,
+  addKibanaServer,
+  deleteKibanaServer,
   getElasticAgents,
   importElasticAgent,
 } from '../api/client';
@@ -69,15 +71,20 @@ export function AgentConfigModal({
   const [basicPass, setBasicPass] = useState('');
   const [customHeaders, setCustomHeaders] = useState<Array<{key: string, value: string}>>([]);
 
-  // Elastic agent discovery
-  const [elasticEnabled, setElasticEnabled] = useState(false);
+  // Kibana servers + Elastic agent discovery
+  const [kibanaServers, setKibanaServers] = useState<KibanaServer[]>([]);
+  const [newKibanaName, setNewKibanaName] = useState('');
+  const [newKibanaUrl, setNewKibanaUrl] = useState('');
+  const [newKibanaKey, setNewKibanaKey] = useState('');
+  const [addingKibana, setAddingKibana] = useState(false);
+  const [activeServerId, setActiveServerId] = useState<string | null>(null);
   const [elasticAgents, setElasticAgents] = useState<ElasticAgent[]>([]);
   const [loadingElastic, setLoadingElastic] = useState(false);
 
   useEffect(() => {
-    getConfig()
-      .then((cfg) => setElasticEnabled(cfg.elastic_enabled))
-      .catch(() => {/* config not available */});
+    getKibanaServers()
+      .then(setKibanaServers)
+      .catch(() => {});
   }, []);
 
   function buildHeaders(): Record<string, string> {
@@ -137,10 +144,41 @@ export function AgentConfigModal({
     }
   };
 
-  const handleRefreshElastic = async () => {
-    setLoadingElastic(true);
+  const handleAddKibana = async () => {
+    if (!newKibanaName.trim() || !newKibanaUrl.trim() || !newKibanaKey.trim()) return;
+    setAddingKibana(true);
     try {
-      const agents = await getElasticAgents();
+      const server = await addKibanaServer(newKibanaName.trim(), newKibanaUrl.trim(), newKibanaKey.trim());
+      setKibanaServers((prev) => [server, ...prev]);
+      setNewKibanaName('');
+      setNewKibanaUrl('');
+      setNewKibanaKey('');
+    } catch (err) {
+      setError((err as Error).message);
+    } finally {
+      setAddingKibana(false);
+    }
+  };
+
+  const handleDeleteKibana = async (id: string) => {
+    try {
+      await deleteKibanaServer(id);
+      setKibanaServers((prev) => prev.filter((s) => s.id !== id));
+      if (activeServerId === id) {
+        setActiveServerId(null);
+        setElasticAgents([]);
+      }
+    } catch (err) {
+      setError((err as Error).message);
+    }
+  };
+
+  const handleDiscoverFromServer = async (serverId: string) => {
+    setActiveServerId(serverId);
+    setLoadingElastic(true);
+    setElasticAgents([]);
+    try {
+      const agents = await getElasticAgents(serverId);
       setElasticAgents(agents);
     } catch (err) {
       setError((err as Error).message);
@@ -150,8 +188,9 @@ export function AgentConfigModal({
   };
 
   const handleImportElastic = async (agentId: string) => {
+    if (!activeServerId) return;
     try {
-      await importElasticAgent(agentId);
+      await importElasticAgent(activeServerId, agentId);
       onAgentsChanged();
     } catch (err) {
       setError((err as Error).message);
@@ -434,56 +473,58 @@ export function AgentConfigModal({
           </>
         )}
 
-        {/* Elastic Agent Discovery */}
-        {elasticEnabled && (
-          <>
-            <EuiHorizontalRule margin="m" />
-            <EuiFlexGroup alignItems="center" gutterSize="s" responsive={false}>
+        {/* Elastic Agent Builder — Kibana Servers */}
+        <EuiHorizontalRule margin="m" />
+        <EuiText size="s">
+          <strong>Elastic Agent Builder</strong>
+        </EuiText>
+        <EuiSpacer size="s" />
+
+        {/* Existing Kibana servers */}
+        {kibanaServers.map((s) => (
+          <div key={s.id} css={css`margin-bottom: 6px;`}>
+            <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false}>
               <EuiFlexItem>
-                <EuiText size="s">
-                  <strong>Elastic Agent Builder</strong>
-                </EuiText>
+                <EuiText size="s"><strong>{s.name}</strong></EuiText>
+                <EuiText size="xs" color="subdued">{s.url}</EuiText>
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <EuiButton
+                  size="s"
+                  iconType="refresh"
+                  onClick={() => handleDiscoverFromServer(s.id)}
+                  isLoading={loadingElastic && activeServerId === s.id}
+                >
+                  Discover
+                </EuiButton>
               </EuiFlexItem>
               <EuiFlexItem grow={false}>
                 <EuiButtonIcon
-                  iconType="refresh"
-                  aria-label="Refresh elastic agents"
-                  onClick={handleRefreshElastic}
-                  isLoading={loadingElastic}
+                  iconType="trash"
+                  color="danger"
+                  aria-label={`Remove ${s.name}`}
+                  onClick={() => handleDeleteKibana(s.id)}
                   size="s"
                 />
               </EuiFlexItem>
             </EuiFlexGroup>
-            <EuiSpacer size="s" />
-            {loadingElastic && (
-              <EuiFlexGroup justifyContent="center">
-                <EuiFlexItem grow={false}>
-                  <EuiLoadingSpinner size="m" />
-                </EuiFlexItem>
-              </EuiFlexGroup>
-            )}
-            {!loadingElastic && elasticAgents.length === 0 && (
-              <EuiText size="xs" color="subdued">
-                Click refresh to discover agents from Elastic Agent Builder.
-              </EuiText>
-            )}
-            {!loadingElastic && elasticAgents.length > 0 && (
-              <div>
+
+            {/* Show discovered agents for this server */}
+            {activeServerId === s.id && !loadingElastic && elasticAgents.length > 0 && (
+              <div css={css`margin: 8px 0 8px 16px; padding-left: 12px; border-left: 2px solid rgba(128,128,128,0.3);`}>
                 {elasticAgents.map((ea) => (
                   <EuiFlexGroup
                     key={ea.id}
                     gutterSize="s"
                     alignItems="center"
                     responsive={false}
-                    css={css`margin-bottom: 8px;`}
+                    css={css`margin-bottom: 6px;`}
                   >
                     <EuiFlexItem>
-                      <EuiText size="s">
-                        <strong>{ea.name}</strong>
-                      </EuiText>
-                      <EuiText size="xs" color="subdued">
-                        {ea.description}
-                      </EuiText>
+                      <EuiText size="xs"><strong>{ea.name}</strong></EuiText>
+                      {ea.description && (
+                        <EuiText size="xs" color="subdued">{ea.description}</EuiText>
+                      )}
                     </EuiFlexItem>
                     <EuiFlexItem grow={false}>
                       <EuiButton
@@ -498,8 +539,62 @@ export function AgentConfigModal({
                 ))}
               </div>
             )}
-          </>
-        )}
+            {activeServerId === s.id && !loadingElastic && elasticAgents.length === 0 && (
+              <EuiText size="xs" color="subdued" css={css`margin-left: 16px; margin-top: 4px;`}>
+                No agents found on this server.
+              </EuiText>
+            )}
+          </div>
+        ))}
+
+        {/* Add new Kibana server */}
+        <EuiSpacer size="s" />
+        <EuiAccordion
+          id="add-kibana-accordion"
+          buttonContent="Add Kibana Server"
+          paddingSize="s"
+        >
+          <EuiFormRow label="Name">
+            <EuiFieldText
+              fullWidth
+              compressed
+              placeholder="My Kibana"
+              value={newKibanaName}
+              onChange={(e) => setNewKibanaName(e.target.value)}
+            />
+          </EuiFormRow>
+          <EuiSpacer size="xs" />
+          <EuiFormRow label="Kibana URL">
+            <EuiFieldText
+              fullWidth
+              compressed
+              placeholder="https://my-kibana.example.com"
+              value={newKibanaUrl}
+              onChange={(e) => setNewKibanaUrl(e.target.value)}
+            />
+          </EuiFormRow>
+          <EuiSpacer size="xs" />
+          <EuiFormRow label="API Key">
+            <EuiFieldPassword
+              type="dual"
+              fullWidth
+              compressed
+              placeholder="Elasticsearch API key"
+              value={newKibanaKey}
+              onChange={(e) => setNewKibanaKey(e.target.value)}
+            />
+          </EuiFormRow>
+          <EuiSpacer size="s" />
+          <EuiButton
+            size="s"
+            fill
+            onClick={handleAddKibana}
+            isLoading={addingKibana}
+            isDisabled={!newKibanaName.trim() || !newKibanaUrl.trim() || !newKibanaKey.trim()}
+          >
+            Save Server
+          </EuiButton>
+        </EuiAccordion>
       </EuiModalBody>
 
       <EuiModalFooter>

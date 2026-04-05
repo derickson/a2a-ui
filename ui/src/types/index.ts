@@ -61,6 +61,13 @@ export interface ElasticAgent {
   description: string;
 }
 
+export interface KibanaServer {
+  id: string;
+  name: string;
+  url: string;
+  created_at: string;
+}
+
 export interface AppConfig {
   elastic_enabled: boolean;
   base_path: string;

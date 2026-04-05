@@ -17,6 +17,16 @@ class Base(DeclarativeBase):
     pass
 
 
+class KibanaServer(Base):
+    __tablename__ = "kibana_servers"
+
+    id = Column(String, primary_key=True, default=_new_id)
+    name = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    api_key = Column(String, nullable=False)
+    created_at = Column(DateTime(timezone=True), default=_utcnow)
+
+
 class Agent(Base):
     __tablename__ = "agents"
 
