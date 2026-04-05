@@ -1,6 +1,7 @@
 import { EuiPanel, EuiText } from '@elastic/eui';
 import { css } from '@emotion/react';
 import type { Message } from '../types';
+import { MessageContent } from './MessageContent';
 
 interface MessageBubbleProps {
   message: Message;
@@ -49,29 +50,34 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
               `}
             word-wrap: break-word;
             overflow-wrap: break-word;
-            white-space: pre-wrap;
           `}
         >
           <EuiText size="s">
-            <p css={css`margin: 0;`}>
-              {message.content}
-              {isStreaming && (
-                <span
-                  css={css`
-                    display: inline-block;
-                    width: 2px;
-                    height: 1em;
-                    background: currentColor;
-                    margin-left: 2px;
-                    vertical-align: text-bottom;
-                    animation: blink 1s step-end infinite;
-                    @keyframes blink {
-                      50% { opacity: 0; }
-                    }
-                  `}
-                />
-              )}
-            </p>
+            {isUser ? (
+              <p css={css`margin: 0; white-space: pre-wrap;`}>
+                {message.content}
+              </p>
+            ) : (
+              <div css={css`margin: 0;`}>
+                <MessageContent content={message.content} />
+                {isStreaming && (
+                  <span
+                    css={css`
+                      display: inline-block;
+                      width: 2px;
+                      height: 1em;
+                      background: currentColor;
+                      margin-left: 2px;
+                      vertical-align: text-bottom;
+                      animation: blink 1s step-end infinite;
+                      @keyframes blink {
+                        50% { opacity: 0; }
+                      }
+                    `}
+                  />
+                )}
+              </div>
+            )}
           </EuiText>
         </EuiPanel>
         <div
