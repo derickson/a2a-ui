@@ -23,7 +23,7 @@ async def lifespan(app: FastAPI):
 
 settings = get_settings()
 app = FastAPI(
-    title="Hermes A2A Chat",
+    title="A2A UI",
     lifespan=lifespan,
     **({"root_path": settings.base_path} if settings.base_path else {}),
 )
@@ -49,10 +49,13 @@ async def health():
     return {"status": "ok"}
 
 
-# Serve frontend static files in production
+# Serve frontend static files in production (only when not in dev mode)
 # Check both Docker path (ui-dist alongside backend) and dev build path (../ui/dist)
-_here = Path(__file__).resolve().parent
-for _candidate in [_here / "ui-dist", _here.parent / "ui" / "dist"]:
-    if _candidate.is_dir():
-        app.mount("/", StaticFiles(directory=str(_candidate), html=True), name="static")
-        break
+# Only mount if SERVE_STATIC env is set, to avoid shadowing API routes during dev
+import os as _os
+if _os.environ.get("SERVE_STATIC", "").lower() in ("1", "true", "yes"):
+    _here = Path(__file__).resolve().parent
+    for _candidate in [_here / "ui-dist", _here.parent / "ui" / "dist"]:
+        if _candidate.is_dir():
+            app.mount("/", StaticFiles(directory=str(_candidate), html=True), name="static")
+            break
