@@ -26,6 +26,7 @@ export interface Agent {
   url: string;
   description: string;
   card_json: string;
+  headers_json: Record<string, string>;
   created_at: string;
 }
 
@@ -52,4 +53,15 @@ export interface Message {
 export interface StreamEvent {
   type: 'status' | 'artifact' | 'error' | 'done';
   data: Record<string, unknown>;
+}
+
+export interface ElasticAgent {
+  id: string;
+  name: string;
+  description: string;
+}
+
+export interface AppConfig {
+  elastic_enabled: boolean;
+  base_path: string;
 }

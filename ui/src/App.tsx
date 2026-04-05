@@ -29,7 +29,7 @@ import { ChatView } from './components/ChatView';
 import { ConversationList } from './components/ConversationList';
 import { AgentConfigModal } from './components/AgentConfigModal';
 
-const THEME_KEY = 'hermes-a2a-theme';
+const THEME_KEY = 'a2a-ui-theme';
 
 function getInitialTheme(): 'light' | 'dark' {
   const stored = localStorage.getItem(THEME_KEY);
@@ -195,7 +195,7 @@ function App() {
                 </EuiFlexItem>
                 <EuiFlexItem grow={false}>
                   <EuiTitle size="xxs">
-                    <h1>Hermes A2A</h1>
+                    <h1>A2A UI</h1>
                   </EuiTitle>
                 </EuiFlexItem>
               </EuiFlexGroup>

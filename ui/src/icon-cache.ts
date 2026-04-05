@@ -18,6 +18,9 @@ import { icon as plus } from '@elastic/eui/es/components/icon/assets/plus';
 import { icon as stop } from '@elastic/eui/es/components/icon/assets/stop';
 import { icon as sun } from '@elastic/eui/es/components/icon/assets/sun';
 import { icon as trash } from '@elastic/eui/es/components/icon/assets/trash';
+import { icon as lock } from '@elastic/eui/es/components/icon/assets/lock';
+import { icon as importAction } from '@elastic/eui/es/components/icon/assets/import';
+import { icon as refresh } from '@elastic/eui/es/components/icon/assets/refresh';
 
 appendIconComponentCache({
   arrowDown,
@@ -32,4 +35,7 @@ appendIconComponentCache({
   stop,
   sun,
   trash,
+  lock,
+  importAction,
+  refresh,
 });
