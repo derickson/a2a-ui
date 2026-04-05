@@ -10,7 +10,7 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
-from a2a_client import stream_message
+from a2a_client import send_message, stream_message
 from database import async_session, get_db
 from models import Conversation, Message
 
@@ -81,6 +81,10 @@ async def chat_stream(
     context_id = conv.context_id
     agent_headers = json.loads(conv.agent.headers_json) if conv.agent.headers_json else {}
 
+    # Check if agent supports streaming
+    card = json.loads(conv.agent.card_json) if conv.agent.card_json else {}
+    supports_streaming = card.get("capabilities", {}).get("streaming", False)
+
     # Save user message
     user_msg = Message(
         conversation_id=conversation_id,
@@ -101,23 +105,55 @@ async def chat_stream(
         task_id = None
 
         try:
-            async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
-                # Forward the raw event to the client
-                yield f"data: {json.dumps(event)}\n\n"
+            if supports_streaming:
+                async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
+                    yield f"data: {json.dumps(event)}\n\n"
+                    text, tid = _extract_text_from_event(event)
+                    if text:
+                        collected_text += text
+                    if tid:
+                        task_id = tid
+            else:
+                # Non-streaming: use message/send and emit result as SSE events
+                resp = await send_message(agent_url, body.message, context_id, headers=agent_headers)
+                result = resp.get("result", {})
+                task_id = result.get("taskId")
 
-                # Collect text from the event for DB storage
-                text, tid = _extract_text_from_event(event)
-                if text:
-                    collected_text += text
-                if tid:
-                    task_id = tid
+                # Extract text from the response
+                # message/send response may have parts directly on result,
+                # or artifacts array, or nested message structure
+                parts = result.get("parts", [])
+                artifacts = result.get("artifacts", [])
+
+                for part in parts:
+                    if part.get("kind") == "text" or "text" in part:
+                        collected_text += part.get("text", "")
+
+                for artifact in artifacts:
+                    for part in artifact.get("parts", []):
+                        if part.get("kind") == "text" or "text" in part:
+                            collected_text += part.get("text", "")
+
+                # Emit the full response as a single SSE event
+                if collected_text:
+                    synth_event = {
+                        "jsonrpc": "2.0",
+                        "result": {
+                            "kind": "artifact-update",
+                            "artifact": {
+                                "parts": [{"kind": "text", "text": collected_text}]
+                            },
+                            "taskId": task_id,
+                        },
+                    }
+                    yield f"data: {json.dumps(synth_event)}\n\n"
 
         except Exception as e:
             error_event = {"error": str(e)}
             yield f"data: {json.dumps(error_event)}\n\n"
             collected_text = f"[Error communicating with agent: {e}]"
 
-        # Save agent response to DB after stream completes
+        # Save agent response to DB after stream/send completes
         if collected_text:
             async with async_session() as save_db:
                 agent_msg = Message(
