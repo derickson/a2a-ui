@@ -15,7 +15,7 @@ init:
 	# Python venv
 	uv venv $(VENV_DIR) --python 3.11
 	ln -sfn $(VENV_DIR) $(VENV_LINK)
-	uv pip install fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic pydantic-settings python-dotenv
+	uv pip install fastapi "uvicorn[standard]" aiosqlite "sqlalchemy[asyncio]" httpx pydantic pydantic-settings python-dotenv "elastic-apm[starlette]"
 	# Node deps
 	cd $(UI_DIR) && npm install
 	# Init DB

@@ -11,6 +11,11 @@ class Settings(BaseSettings):
     port: int = 8000
     base_path: str = ""
 
+    elastic_apm_server_url: str = ""
+    elastic_apm_secret_token: str = ""
+    elastic_apm_api_key: str = ""
+    elastic_apm_environment: str = "development"
+
 
 @lru_cache
 def get_settings() -> Settings:

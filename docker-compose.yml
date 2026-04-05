@@ -7,6 +7,8 @@ services:
         VITE_BASE_PATH: ${BASE_PATH:-}
     env_file:
       - .env
+    environment:
+      - ELASTIC_APM_ENVIRONMENT=production
     ports:
       - "${PORT:-8000}:${PORT:-8000}"
     volumes:

@@ -7,6 +7,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.routing import APIRouter
 
+from elasticapm.contrib.starlette import ElasticAPM, make_apm_client
+
 from config import get_settings
 from database import init_db
 from routes.agents import router as agents_router
@@ -35,6 +37,19 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+if settings.elastic_apm_server_url:
+    apm_config = {
+        "SERVICE_NAME": "a2a-ui",
+        "SERVER_URL": settings.elastic_apm_server_url,
+        "ENVIRONMENT": settings.elastic_apm_environment,
+    }
+    if settings.elastic_apm_api_key:
+        apm_config["API_KEY"] = settings.elastic_apm_api_key
+    elif settings.elastic_apm_secret_token:
+        apm_config["SECRET_TOKEN"] = settings.elastic_apm_secret_token
+    apm_client = make_apm_client(apm_config)
+    app.add_middleware(ElasticAPM, client=apm_client)
 
 # Wrap all existing routers (which already have /api/* prefixes)
 # under the base path prefix
