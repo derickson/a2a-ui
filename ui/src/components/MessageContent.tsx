@@ -6,6 +6,8 @@ import rehypeSanitize from 'rehype-sanitize';
 import remarkGfm from 'remark-gfm';
 import type { A2APart, FilePart } from '../types';
 
+const API_BASE = import.meta.env.BASE_URL.replace(/\/+$/, '') + '/api';
+
 interface MessageContentProps {
   content: string;
   parts?: A2APart[];
@@ -211,11 +213,16 @@ function FilePartRenderer({ part }: { part: FilePart }) {
   const mimeType = file.mimeType ?? '';
   const fileName = file.name ?? 'file';
 
-  const src = file.uri
-    ? file.uri
-    : file.bytes
-      ? `data:${mimeType};base64,${file.bytes}`
-      : undefined;
+  let src: string | undefined;
+  if (file.bytes) {
+    src = `data:${mimeType};base64,${file.bytes}`;
+  } else if (file.uri) {
+    if (file.uri.startsWith('http://') || file.uri.startsWith('https://')) {
+      src = `${API_BASE}/files/proxy/?url=${encodeURIComponent(file.uri)}`;
+    } else {
+      src = `${API_BASE}/files/?path=${encodeURIComponent(file.uri)}`;
+    }
+  }
 
   if (mimeType.startsWith('image/') && src) {
     return (
@@ -331,7 +338,7 @@ function renderTextWithMedia(text: string): React.ReactNode[] | null {
 
     const filePath = match[1];
     const ext = filePath.toLowerCase().substring(filePath.lastIndexOf('.'));
-    const src = `/api/files/?path=${encodeURIComponent(filePath)}`;
+    const src = `${API_BASE}/files/?path=${encodeURIComponent(filePath)}`;
 
     if (IMAGE_EXTS.includes(ext)) {
       nodes.push(
