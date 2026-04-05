@@ -1,4 +1,4 @@
-import { EuiPanel, EuiText } from '@elastic/eui';
+import { EuiPanel, EuiText, useEuiTheme } from '@elastic/eui';
 import { css } from '@emotion/react';
 import type { Message } from '../types';
 import { MessageContent } from './MessageContent';
@@ -19,6 +19,7 @@ function formatTime(iso: string): string {
 
 export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
+  const { euiTheme } = useEuiTheme();
 
   return (
     <div
@@ -41,7 +42,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
           css={css`
             ${isUser
               ? `
-                background: var(--euiColorPrimary);
+                background: ${euiTheme.colors.primary};
                 color: #fff;
                 border-radius: 16px 16px 4px 16px;
               `
