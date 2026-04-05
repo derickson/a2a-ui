@@ -51,6 +51,8 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
               `}
             word-wrap: break-word;
             overflow-wrap: break-word;
+            user-select: text;
+            cursor: text;
           `}
         >
           <EuiText size="s">
