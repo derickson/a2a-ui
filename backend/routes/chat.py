@@ -68,9 +68,11 @@ async def chat_stream(
     context_id = conv.context_id
     agent_headers = json.loads(conv.agent.headers_json) if conv.agent.headers_json else {}
 
-    # Check if agent supports streaming
+    # Check agent capabilities
     card = json.loads(conv.agent.card_json) if conv.agent.card_json else {}
-    supports_streaming = card.get("capabilities", {}).get("streaming", False)
+    capabilities = card.get("capabilities", {})
+    supports_streaming = capabilities.get("streaming", False)
+    has_state_history = capabilities.get("stateTransitionHistory", False)
 
     # Save user message
     user_msg = Message(
@@ -87,6 +89,29 @@ async def chat_stream(
     conv.updated_at = datetime.now(timezone.utc)
     await db.commit()
 
+    # For stateless agents, embed conversation history in the message
+    # so the agent has context of the ongoing conversation
+    actual_message = body.message
+    if not has_state_history:
+        # Reload messages for this conversation (excluding the one we just added)
+        hist_result = await db.execute(
+            select(Message)
+            .where(Message.conversation_id == conversation_id)
+            .order_by(Message.created_at)
+        )
+        history_msgs = hist_result.scalars().all()
+        # Build history text from prior messages (skip the current one)
+        prior = history_msgs[:-1]  # exclude the message we just saved
+        if prior:
+            lines = []
+            for m in prior:
+                role_label = "User" if m.role == "user" else "Assistant"
+                # Truncate long messages to keep context manageable
+                text = m.content[:500] if m.content else ""
+                lines.append(f"{role_label}: {text}")
+            history_text = "\n".join(lines)
+            actual_message = f"Previous conversation:\n{history_text}\n\nCurrent message: {body.message}"
+
     async def event_generator():
         collected_parts: list[dict] = []
         task_id = None
@@ -94,7 +119,7 @@ async def chat_stream(
         try:
             if supports_streaming:
                 returned_context = None
-                async for event in stream_message(agent_url, body.message, context_id, headers=agent_headers):
+                async for event in stream_message(agent_url, actual_message, context_id, headers=agent_headers):
                     yield f"data: {json.dumps(event)}\n\n"
                     parts, tid, ctx = _extract_parts_from_event(event)
                     if parts:
@@ -115,7 +140,7 @@ async def chat_stream(
                         await ctx_db.commit()
             else:
                 # Non-streaming: use message/send and emit result as SSE events
-                resp = await send_message(agent_url, body.message, context_id, headers=agent_headers)
+                resp = await send_message(agent_url, actual_message, context_id, headers=agent_headers)
                 result = resp.get("result", {})
                 task_id = result.get("taskId")
 
