@@ -3,6 +3,8 @@ __pycache__/
 *.pyo
 .venv
 backend/data/
+backend/uv.lock
 node_modules/
 ui/dist/
 .env
+.claude/worktrees/

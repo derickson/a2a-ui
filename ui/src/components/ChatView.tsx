@@ -7,6 +7,7 @@ import {
   EuiEmptyPrompt,
   EuiIcon,
   EuiLoadingSpinner,
+  EuiPanel,
 } from '@elastic/eui';
 import { css } from '@emotion/react';
 import type { Message } from '../types';
@@ -20,26 +21,6 @@ interface ChatViewProps {
   activeConversationId: string | null;
 }
 
-const containerStyle = css`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  min-height: 0;
-`;
-
-const messagesAreaStyle = css`
-  flex: 1 1 auto;
-  overflow-y: auto;
-  padding: 16px 24px;
-  min-height: 0;
-`;
-
-const inputAreaStyle = css`
-  flex: 0 0 auto;
-  padding: 12px 24px;
-  border-top: 1px solid var(--euiColorLightShade, #d3dae6);
-`;
-
 export function ChatView({
   messages,
   isStreaming,
@@ -50,7 +31,6 @@ export function ChatView({
   const [inputValue, setInputValue] = useState('');
   const bottomRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when messages change or streaming content updates
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, streamingContent]);
@@ -69,63 +49,114 @@ export function ChatView({
     }
   };
 
+  // Empty state — no conversation selected
   if (!activeConversationId) {
     return (
-      <div css={containerStyle}>
-        <EuiFlexGroup
-          alignItems="center"
-          justifyContent="center"
-          css={css`
-            flex: 1;
-          `}
-        >
-          <EuiFlexItem grow={false}>
-            <EuiEmptyPrompt
-              iconType="discuss"
-              title={<h2>Hermes A2A Chat</h2>}
-              body={<p>Select a conversation or start a new chat to begin.</p>}
-            />
-          </EuiFlexItem>
-        </EuiFlexGroup>
+      <div
+        css={css`
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          height: 100%;
+        `}
+      >
+        <EuiEmptyPrompt
+          iconType="discuss"
+          title={<h2>Hermes A2A Chat</h2>}
+          body={<p>Select a conversation or start a new chat to begin.</p>}
+        />
       </div>
     );
   }
 
   return (
-    <div css={containerStyle}>
-      <div css={messagesAreaStyle}>
-        {messages.map((msg) => (
-          <MessageBubble key={msg.id} message={msg} />
-        ))}
-        {isStreaming && streamingContent && (
-          <MessageBubble
-            message={{
-              id: 'streaming',
-              conversation_id: activeConversationId,
-              role: 'agent',
-              content: streamingContent,
-              task_id: null,
-              created_at: new Date().toISOString(),
-            }}
-            isStreaming
-          />
-        )}
-        {isStreaming && !streamingContent && (
-          <EuiFlexGroup gutterSize="s" alignItems="center" css={css`margin-bottom: 12px;`}>
-            <EuiFlexItem grow={false}>
-              <EuiLoadingSpinner size="m" />
-            </EuiFlexItem>
-            <EuiFlexItem grow={false}>
-              <span style={{ opacity: 0.6, fontSize: 13 }}>Agent is thinking...</span>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        )}
-        <div ref={bottomRef} />
+    <div
+      css={css`
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        min-height: 0;
+      `}
+    >
+      {/* Messages area */}
+      <div
+        css={css`
+          flex: 1 1 auto;
+          overflow-y: auto;
+          padding: 24px 16px;
+          min-height: 0;
+        `}
+      >
+        <div
+          css={css`
+            max-width: 800px;
+            margin: 0 auto;
+          `}
+        >
+          {messages.map((msg) => (
+            <MessageBubble key={msg.id} message={msg} />
+          ))}
+          {isStreaming && streamingContent && (
+            <MessageBubble
+              message={{
+                id: 'streaming',
+                conversation_id: activeConversationId,
+                role: 'agent',
+                content: streamingContent,
+                task_id: null,
+                created_at: new Date().toISOString(),
+              }}
+              isStreaming
+            />
+          )}
+          {isStreaming && !streamingContent && (
+            <EuiFlexGroup
+              gutterSize="s"
+              alignItems="center"
+              css={css`
+                margin-bottom: 16px;
+                padding-left: 4px;
+              `}
+            >
+              <EuiFlexItem grow={false}>
+                <EuiLoadingSpinner size="m" />
+              </EuiFlexItem>
+              <EuiFlexItem grow={false}>
+                <span css={css`opacity: 0.5; font-size: 13px;`}>
+                  Agent is thinking...
+                </span>
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          )}
+          <div ref={bottomRef} />
+        </div>
       </div>
 
-      <div css={inputAreaStyle}>
-        <EuiFlexGroup gutterSize="s" responsive={false}>
-          <EuiFlexItem>
+      {/* Input area */}
+      <div
+        css={css`
+          flex: 0 0 auto;
+          padding: 12px 16px 16px;
+          border-top: 1px solid var(--euiColorLightShade);
+        `}
+      >
+        <div
+          css={css`
+            max-width: 800px;
+            margin: 0 auto;
+          `}
+        >
+          <EuiPanel
+            hasShadow={false}
+            hasBorder
+            paddingSize="none"
+            css={css`
+              display: flex;
+              align-items: center;
+              border-radius: 24px;
+              padding: 4px 4px 4px 16px;
+            `}
+          >
             <EuiFieldText
               fullWidth
               placeholder={isStreaming ? 'Waiting for response...' : 'Type a message...'}
@@ -134,38 +165,55 @@ export function ChatView({
               onKeyDown={handleKeyDown}
               disabled={isStreaming}
               aria-label="Message input"
-              append={
-                <EuiButtonIcon
-                  iconType="arrowRight"
-                  aria-label="Send message"
-                  onClick={handleSend}
-                  isDisabled={isStreaming || !inputValue.trim()}
-                  display="fill"
-                  color="primary"
-                  size="m"
-                />
-              }
+              css={css`
+                .euiFieldText {
+                  border: none;
+                  box-shadow: none;
+                  background: transparent;
+                  padding-left: 0;
+                }
+              `}
             />
-          </EuiFlexItem>
-        </EuiFlexGroup>
-        {isStreaming && (
-          <EuiFlexGroup justifyContent="center" css={css`margin-top: 4px;`}>
-            <EuiFlexItem grow={false}>
-              <button
-                onClick={() => {/* cancel handled by parent if needed */}}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  opacity: 0.6,
-                  fontSize: 12,
-                }}
-              >
-                <EuiIcon type="stop" size="s" /> Stop generating
-              </button>
-            </EuiFlexItem>
-          </EuiFlexGroup>
-        )}
+            <EuiButtonIcon
+              iconType="arrowRight"
+              aria-label="Send message"
+              onClick={handleSend}
+              isDisabled={isStreaming || !inputValue.trim()}
+              display="fill"
+              color="primary"
+              size="m"
+              css={css`
+                border-radius: 50%;
+                min-width: 36px;
+                min-height: 36px;
+                flex-shrink: 0;
+              `}
+            />
+          </EuiPanel>
+          {isStreaming && (
+            <EuiFlexGroup justifyContent="center" css={css`margin-top: 6px;`}>
+              <EuiFlexItem grow={false}>
+                <button
+                  onClick={() => {/* cancel handled by parent if needed */}}
+                  css={css`
+                    background: none;
+                    border: none;
+                    cursor: pointer;
+                    opacity: 0.5;
+                    font-size: 12px;
+                    color: inherit;
+                    display: flex;
+                    align-items: center;
+                    gap: 4px;
+                    &:hover { opacity: 0.8; }
+                  `}
+                >
+                  <EuiIcon type="stop" size="s" /> Stop generating
+                </button>
+              </EuiFlexItem>
+            </EuiFlexGroup>
+          )}
+        </div>
       </div>
     </div>
   );

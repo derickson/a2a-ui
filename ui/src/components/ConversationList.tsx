@@ -2,8 +2,6 @@ import {
   EuiButton,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiListGroup,
-  EuiListGroupItem,
   EuiSpacer,
   EuiText,
   EuiButtonIcon,
@@ -24,19 +22,6 @@ interface ConversationListProps {
   onDeleteConversation: (id: string) => void;
   onOpenAgentConfig: () => void;
 }
-
-const sidebarStyle = css`
-  display: flex;
-  flex-direction: column;
-  height: 100%;
-  padding: 12px;
-`;
-
-const listContainerStyle = css`
-  flex: 1 1 auto;
-  overflow-y: auto;
-  min-height: 0;
-`;
 
 function formatDate(iso: string): string {
   try {
@@ -64,88 +49,144 @@ export function ConversationList({
   onOpenAgentConfig,
 }: ConversationListProps) {
   return (
-    <div css={sidebarStyle}>
-      <EuiFlexGroup gutterSize="s" responsive={false}>
-        <EuiFlexItem>
-          <AgentSelector
-            agents={agents}
-            selectedAgentId={selectedAgentId}
-            onChange={onSelectAgent}
-          />
-        </EuiFlexItem>
-        <EuiFlexItem grow={false}>
-          <EuiToolTip content="Manage agents">
-            <EuiButtonIcon
-              iconType="gear"
-              aria-label="Manage agents"
-              onClick={onOpenAgentConfig}
-              display="base"
-              size="m"
+    <div
+      css={css`
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        padding: 16px;
+        overflow: hidden;
+      `}
+    >
+      {/* Agent selector + gear — don't grow */}
+      <div css={css`flex: 0 0 auto;`}>
+        <EuiFlexGroup gutterSize="s" responsive={false} alignItems="center">
+          <EuiFlexItem>
+            <AgentSelector
+              agents={agents}
+              selectedAgentId={selectedAgentId}
+              onChange={onSelectAgent}
             />
-          </EuiToolTip>
-        </EuiFlexItem>
-      </EuiFlexGroup>
+          </EuiFlexItem>
+          <EuiFlexItem grow={false}>
+            <EuiToolTip content="Manage agents">
+              <EuiButtonIcon
+                iconType="gear"
+                aria-label="Manage agents"
+                onClick={onOpenAgentConfig}
+                display="base"
+                size="m"
+              />
+            </EuiToolTip>
+          </EuiFlexItem>
+        </EuiFlexGroup>
 
-      <EuiSpacer size="s" />
+        <EuiSpacer size="m" />
 
-      <EuiButton
-        fullWidth
-        fill
-        iconType="plus"
-        onClick={onNewChat}
-        isDisabled={!selectedAgentId}
-        size="s"
+        <EuiButton
+          fullWidth
+          fill
+          iconType="plus"
+          onClick={onNewChat}
+          isDisabled={!selectedAgentId}
+          size="s"
+        >
+          New Chat
+        </EuiButton>
+
+        <EuiSpacer size="m" />
+      </div>
+
+      {/* Conversation list — fills remaining space */}
+      <div
+        css={css`
+          flex: 1 1 auto;
+          overflow-y: auto;
+          min-height: 0;
+          margin: 0 -8px;
+          padding: 0 4px;
+        `}
       >
-        New Chat
-      </EuiButton>
-
-      <EuiSpacer size="m" />
-
-      <div css={listContainerStyle}>
         {conversations.length === 0 ? (
-          <EuiText size="s" color="subdued" textAlign="center">
+          <EuiText size="s" color="subdued" textAlign="center" css={css`padding-top: 24px;`}>
             <p>No conversations yet</p>
           </EuiText>
         ) : (
-          <EuiListGroup flush gutterSize="none" maxWidth={false}>
-            {conversations.map((c) => (
-              <EuiListGroupItem
+          conversations.map((c) => {
+            const isActive = c.id === activeConversationId;
+            return (
+              <button
                 key={c.id}
-                label={
-                  <EuiFlexGroup
-                    gutterSize="xs"
-                    alignItems="center"
-                    responsive={false}
-                  >
-                    <EuiFlexItem>
-                      <EuiText size="xs" css={css`line-height: 1.3;`}>
-                        <strong>{c.title || 'Untitled'}</strong>
-                        <br />
-                        <span style={{ opacity: 0.6, fontSize: 11 }}>
-                          {formatDate(c.updated_at)}
-                        </span>
-                      </EuiText>
-                    </EuiFlexItem>
-                    <EuiFlexItem grow={false}>
-                      <EuiButtonIcon
-                        iconType="trash"
-                        aria-label="Delete conversation"
-                        color="danger"
-                        size="xs"
-                        onClick={(e: React.MouseEvent) => {
-                          e.stopPropagation();
-                          onDeleteConversation(c.id);
-                        }}
-                      />
-                    </EuiFlexItem>
-                  </EuiFlexGroup>
-                }
                 onClick={() => onSelectConversation(c.id)}
-                isActive={c.id === activeConversationId}
-                size="s"
-              />
-            ))}
-          </EuiListGroup>
+                css={css`
+                  display: flex;
+                  align-items: center;
+                  width: 100%;
+                  text-align: left;
+                  padding: 10px 12px;
+                  margin-bottom: 2px;
+                  border: none;
+                  border-radius: 8px;
+                  cursor: pointer;
+                  background: ${isActive ? 'var(--euiColorLightShade)' : 'transparent'};
+                  color: inherit;
+                  transition: background 0.15s;
+                  &:hover {
+                    background: var(--euiColorLightShade);
+                  }
+                  &:hover .delete-btn {
+                    opacity: 1;
+                  }
+                `}
+              >
+                <div css={css`flex: 1; min-width: 0;`}>
+                  <div
+                    css={css`
+                      font-size: 13px;
+                      font-weight: ${isActive ? 600 : 400};
+                      white-space: nowrap;
+                      overflow: hidden;
+                      text-overflow: ellipsis;
+                    `}
+                  >
+                    {c.title || 'Untitled'}
+                  </div>
+                  <div
+                    css={css`
+                      font-size: 11px;
+                      opacity: 0.5;
+                      margin-top: 2px;
+                    `}
+                  >
+                    {c.agent?.name && (
+                      <span>{c.agent.name} &middot; </span>
+                    )}
+                    {formatDate(c.updated_at)}
+                  </div>
+                </div>
+                <div
+                  className="delete-btn"
+                  css={css`
+                    opacity: 0;
+                    transition: opacity 0.15s;
+                    flex-shrink: 0;
+                    margin-left: 4px;
+                  `}
+                >
+                  <EuiButtonIcon
+                    iconType="trash"
+                    aria-label="Delete conversation"
+                    color="danger"
+                    size="xs"
+                    onClick={(e: React.MouseEvent) => {
+                      e.stopPropagation();
+                      onDeleteConversation(c.id);
+                    }}
+                  />
+                </div>
+              </button>
+            );
+          })
         )}
       </div>
     </div>

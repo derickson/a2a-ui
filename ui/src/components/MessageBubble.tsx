@@ -1,4 +1,4 @@
-import { EuiPanel, EuiText, EuiFlexGroup, EuiFlexItem } from '@elastic/eui';
+import { EuiPanel, EuiText } from '@elastic/eui';
 import { css } from '@emotion/react';
 import type { Message } from '../types';
 
@@ -6,28 +6,6 @@ interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
 }
-
-const userBubbleStyle = css`
-  background: #0077cc;
-  color: #fff;
-  border-radius: 12px 12px 2px 12px;
-  max-width: 75%;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-`;
-
-const agentBubbleStyle = css`
-  border-radius: 12px 12px 12px 2px;
-  max-width: 75%;
-  word-wrap: break-word;
-  white-space: pre-wrap;
-`;
-
-const timestampStyle = css`
-  font-size: 11px;
-  opacity: 0.6;
-  margin-top: 2px;
-`;
 
 function formatTime(iso: string): string {
   try {
@@ -42,31 +20,72 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
   const isUser = message.role === 'user';
 
   return (
-    <EuiFlexGroup
-      justifyContent={isUser ? 'flexEnd' : 'flexStart'}
-      gutterSize="none"
+    <div
       css={css`
-        margin-bottom: 12px;
+        display: flex;
+        justify-content: ${isUser ? 'flex-end' : 'flex-start'};
+        margin-bottom: 16px;
       `}
     >
-      <EuiFlexItem grow={false}>
+      <div
+        css={css`
+          max-width: 80%;
+          min-width: 40px;
+        `}
+      >
         <EuiPanel
           paddingSize="m"
           hasShadow={false}
           hasBorder={!isUser}
-          css={isUser ? userBubbleStyle : agentBubbleStyle}
+          css={css`
+            ${isUser
+              ? `
+                background: var(--euiColorPrimary);
+                color: #fff;
+                border-radius: 16px 16px 4px 16px;
+              `
+              : `
+                border-radius: 16px 16px 16px 4px;
+              `}
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            white-space: pre-wrap;
+          `}
         >
           <EuiText size="s">
-            <p style={{ margin: 0 }}>{message.content}{isStreaming && <span className="cursor-blink">|</span>}</p>
+            <p css={css`margin: 0;`}>
+              {message.content}
+              {isStreaming && (
+                <span
+                  css={css`
+                    display: inline-block;
+                    width: 2px;
+                    height: 1em;
+                    background: currentColor;
+                    margin-left: 2px;
+                    vertical-align: text-bottom;
+                    animation: blink 1s step-end infinite;
+                    @keyframes blink {
+                      50% { opacity: 0; }
+                    }
+                  `}
+                />
+              )}
+            </p>
           </EuiText>
         </EuiPanel>
-        <EuiText
-          css={timestampStyle}
-          textAlign={isUser ? 'right' : 'left'}
+        <div
+          css={css`
+            font-size: 11px;
+            opacity: 0.45;
+            margin-top: 4px;
+            text-align: ${isUser ? 'right' : 'left'};
+            padding: 0 8px;
+          `}
         >
           {formatTime(message.created_at)}
-        </EuiText>
-      </EuiFlexItem>
-    </EuiFlexGroup>
+        </div>
+      </div>
+    </div>
   );
 }

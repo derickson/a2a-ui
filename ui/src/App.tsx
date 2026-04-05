@@ -1,22 +1,21 @@
 import { useState, useEffect, useCallback } from 'react';
 import {
   EuiProvider,
-  EuiPageTemplate,
   EuiHeader,
   EuiHeaderSection,
   EuiHeaderSectionItem,
+  EuiHeaderSectionItemButton,
   EuiTitle,
-  EuiButtonIcon,
   EuiIcon,
   EuiFlexGroup,
   EuiFlexItem,
-  EuiShowFor,
-  EuiHideFor,
   EuiFlyout,
   EuiFlyoutBody,
   EuiFlyoutHeader,
+  useIsWithinBreakpoints,
+  useEuiTheme,
 } from '@elastic/eui';
-import { css } from '@emotion/react';
+import { css, Global } from '@emotion/react';
 
 import type { Agent, Conversation } from './types';
 import {
@@ -39,6 +38,15 @@ function getInitialTheme(): 'light' | 'dark' {
     ? 'dark'
     : 'light';
 }
+
+const globalStyles = css`
+  html, body, #root {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    overflow: hidden;
+  }
+`;
 
 function App() {
   const [colorMode, setColorMode] = useState<'light' | 'dark'>(getInitialTheme);
@@ -63,7 +71,6 @@ function App() {
     localStorage.setItem(THEME_KEY, next);
   };
 
-  // Load agents
   const refreshAgents = useCallback(async () => {
     try {
       const data = await getAgents();
@@ -76,7 +83,6 @@ function App() {
     }
   }, [selectedAgentId]);
 
-  // Load conversations
   const refreshConversations = useCallback(async () => {
     try {
       const data = await getConversations();
@@ -91,7 +97,6 @@ function App() {
     refreshConversations();
   }, [refreshAgents, refreshConversations]);
 
-  // Select a conversation
   const handleSelectConversation = useCallback(
     async (id: string) => {
       setActiveConversationId(id);
@@ -101,7 +106,6 @@ function App() {
     [loadConversation],
   );
 
-  // New chat
   const handleNewChat = useCallback(async () => {
     if (!selectedAgentId) return;
     try {
@@ -115,7 +119,6 @@ function App() {
     }
   }, [selectedAgentId, refreshConversations, loadConversation]);
 
-  // Delete conversation
   const handleDeleteConversation = useCallback(
     async (id: string) => {
       try {
@@ -131,16 +134,17 @@ function App() {
     [activeConversationId, refreshConversations],
   );
 
-  // Send message
   const handleSendMessage = useCallback(
     async (text: string) => {
       if (!activeConversationId) return;
       await sendMessage(activeConversationId, text);
-      // Refresh conversations to update titles/timestamps
       refreshConversations();
     },
     [activeConversationId, sendMessage, refreshConversations],
   );
+
+  const isMobile = useIsWithinBreakpoints(['xs', 's']);
+  const { euiTheme } = useEuiTheme();
 
   const sidebar = (
     <ConversationList
@@ -158,6 +162,7 @@ function App() {
 
   return (
     <EuiProvider colorMode={colorMode}>
+      <Global styles={globalStyles} />
       <div
         css={css`
           display: flex;
@@ -168,44 +173,42 @@ function App() {
       >
         {/* Header */}
         <EuiHeader
-          position="fixed"
           css={css`
             flex: 0 0 auto;
           `}
         >
-          <EuiHeaderSection>
-            <EuiHeaderSectionItem>
-              <EuiShowFor sizes={['xs', 's']}>
-                <EuiButtonIcon
-                  iconType="menu"
+          <EuiHeaderSection grow={false}>
+            {isMobile && (
+              <EuiHeaderSectionItem>
+                <EuiHeaderSectionItemButton
                   aria-label="Toggle sidebar"
                   onClick={() => setMobileSidebarOpen(!mobileSidebarOpen)}
-                  display="empty"
-                  size="m"
-                  css={css`margin-right: 8px;`}
-                />
-              </EuiShowFor>
+                >
+                  <EuiIcon type="menu" size="m" />
+                </EuiHeaderSectionItemButton>
+              </EuiHeaderSectionItem>
+            )}
+            <EuiHeaderSectionItem>
               <EuiFlexGroup gutterSize="s" alignItems="center" responsive={false}>
                 <EuiFlexItem grow={false}>
                   <EuiIcon type="compute" size="l" />
                 </EuiFlexItem>
                 <EuiFlexItem grow={false}>
-                  <EuiTitle size="xs">
+                  <EuiTitle size="xxs">
                     <h1>Hermes A2A</h1>
                   </EuiTitle>
                 </EuiFlexItem>
               </EuiFlexGroup>
             </EuiHeaderSectionItem>
           </EuiHeaderSection>
-          <EuiHeaderSection>
+          <EuiHeaderSection grow={false}>
             <EuiHeaderSectionItem>
-              <EuiButtonIcon
-                iconType={colorMode === 'dark' ? 'sun' : 'moon'}
+              <EuiHeaderSectionItemButton
                 aria-label="Toggle theme"
                 onClick={toggleTheme}
-                display="empty"
-                size="m"
-              />
+              >
+                <EuiIcon type={colorMode === 'dark' ? 'sun' : 'moon'} size="m" />
+              </EuiHeaderSectionItemButton>
             </EuiHeaderSectionItem>
           </EuiHeaderSection>
         </EuiHeader>
@@ -216,42 +219,40 @@ function App() {
             display: flex;
             flex: 1 1 auto;
             min-height: 0;
-            margin-top: 48px; /* header height */
+            overflow: hidden;
           `}
         >
           {/* Desktop sidebar */}
-          <EuiHideFor sizes={['xs', 's']}>
-            <EuiPageTemplate.Sidebar
-              sticky
+          {!isMobile && (
+            <div
               css={css`
-                width: 280px;
-                min-width: 280px;
-                border-right: 1px solid var(--euiColorLightShade, #d3dae6);
-                height: 100%;
+                width: 300px;
+                min-width: 300px;
+                border-right: ${euiTheme.border.thin};
+                display: flex;
+                flex-direction: column;
                 overflow: hidden;
               `}
             >
               {sidebar}
-            </EuiPageTemplate.Sidebar>
-          </EuiHideFor>
+            </div>
+          )}
 
           {/* Mobile sidebar flyout */}
-          {mobileSidebarOpen && (
-            <EuiShowFor sizes={['xs', 's']}>
-              <EuiFlyout
-                ownFocus
-                onClose={() => setMobileSidebarOpen(false)}
-                size="s"
-                side="left"
-              >
-                <EuiFlyoutHeader hasBorder>
-                  <EuiTitle size="xs">
-                    <h2>Conversations</h2>
-                  </EuiTitle>
-                </EuiFlyoutHeader>
-                <EuiFlyoutBody>{sidebar}</EuiFlyoutBody>
-              </EuiFlyout>
-            </EuiShowFor>
+          {isMobile && mobileSidebarOpen && (
+            <EuiFlyout
+              ownFocus
+              onClose={() => setMobileSidebarOpen(false)}
+              size="s"
+              side="left"
+            >
+              <EuiFlyoutHeader hasBorder>
+                <EuiTitle size="xs">
+                  <h2>Conversations</h2>
+                </EuiTitle>
+              </EuiFlyoutHeader>
+              <EuiFlyoutBody>{sidebar}</EuiFlyoutBody>
+            </EuiFlyout>
           )}
 
           {/* Main chat area */}
@@ -261,7 +262,7 @@ function App() {
               min-width: 0;
               display: flex;
               flex-direction: column;
-              height: 100%;
+              overflow: hidden;
             `}
           >
             <ChatView

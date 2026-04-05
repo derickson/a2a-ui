@@ -27,6 +27,7 @@ async def send_message(
             "message": {
                 "role": "user",
                 "parts": [{"text": message}],
+                "messageId": str(uuid.uuid4()),
             },
         },
         "id": str(uuid.uuid4()),
@@ -51,6 +52,7 @@ async def stream_message(
             "message": {
                 "role": "user",
                 "parts": [{"text": message}],
+                "messageId": str(uuid.uuid4()),
             },
         },
         "id": str(uuid.uuid4()),
