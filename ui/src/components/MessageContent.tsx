@@ -35,9 +35,21 @@ function getToolName(label: string): string {
   return 'Tool';
 }
 
+/**
+ * Split text after a tool call into the tool's immediate output
+ * (first paragraph) and the remaining commentary text.
+ * A paragraph break is defined as two or more consecutive newlines.
+ */
+function splitToolOutput(text: string): [string, string] {
+  const breakIdx = text.search(/\n\s*\n/);
+  if (breakIdx === -1) {
+    return [text.trim(), ''];
+  }
+  return [text.slice(0, breakIdx).trim(), text.slice(breakIdx).trim()];
+}
+
 function parseContent(content: string): ContentSegment[] {
   // Match tool calls: `<emoji> <command>` on their own line(s)
-  // Pattern: newline(s), backtick, emoji + text, backtick, newline(s)
   const toolPattern = /\n?`(\p{Emoji_Presentation}[^`\n]*|\p{Emoji}\uFE0F[^`\n]*)`\n?/gu;
 
   const segments: ContentSegment[] = [];
@@ -48,9 +60,14 @@ function parseContent(content: string): ContentSegment[] {
     // Text before this tool call
     const beforeText = content.slice(lastIndex, match.index).trim();
     if (beforeText) {
-      // Check if this text is output from a previous tool call
       if (segments.length > 0 && segments[segments.length - 1].type === 'tool') {
-        segments[segments.length - 1].toolOutput = beforeText;
+        // Text between two tool calls: first paragraph is previous tool's output,
+        // rest is regular text
+        const [output, rest] = splitToolOutput(beforeText);
+        segments[segments.length - 1].toolOutput = output;
+        if (rest) {
+          segments.push({ type: 'text', text: rest });
+        }
       } else {
         segments.push({ type: 'text', text: beforeText });
       }
@@ -71,13 +88,17 @@ function parseContent(content: string): ContentSegment[] {
   const remaining = content.slice(lastIndex).trim();
   if (remaining) {
     if (segments.length > 0 && segments[segments.length - 1].type === 'tool') {
-      segments[segments.length - 1].toolOutput = remaining;
+      // First paragraph after tool call is output, rest is commentary
+      const [output, rest] = splitToolOutput(remaining);
+      segments[segments.length - 1].toolOutput = output;
+      if (rest) {
+        segments.push({ type: 'text', text: rest });
+      }
     } else {
       segments.push({ type: 'text', text: remaining });
     }
   }
 
-  // If no tool calls found, return the whole thing as text
   if (segments.length === 0) {
     segments.push({ type: 'text', text: content });
   }
