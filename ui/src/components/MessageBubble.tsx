@@ -59,7 +59,7 @@ export function MessageBubble({ message, isStreaming }: MessageBubbleProps) {
               </p>
             ) : (
               <div css={css`margin: 0;`}>
-                <MessageContent content={message.content} />
+                <MessageContent content={message.content} parts={message.parts} />
                 {isStreaming && (
                   <span
                     css={css`

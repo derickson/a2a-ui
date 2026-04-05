@@ -41,11 +41,34 @@ export interface Conversation {
   messages?: Message[];
 }
 
+export interface TextPart {
+  kind: 'text';
+  text: string;
+}
+
+export interface FilePart {
+  kind: 'file';
+  file: {
+    name?: string;
+    mimeType?: string;
+    bytes?: string;
+    uri?: string;
+  };
+}
+
+export interface DataPart {
+  kind: 'data';
+  data: Record<string, unknown>;
+}
+
+export type A2APart = TextPart | FilePart | DataPart;
+
 export interface Message {
   id: string;
   conversation_id: string;
   role: 'user' | 'agent';
   content: string;
+  parts?: A2APart[];
   task_id: string | null;
   created_at: string;
 }
